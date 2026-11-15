@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.database.repositories.container import Repositories
+from app.services.model_service import model_service
 
 router = APIRouter()
 
@@ -100,7 +101,24 @@ async def send_message(
         content=request.content,
     )
 
-    assistant_content = f"I received your message: '{request.content}'. Model integration coming in Phase 4."
+    # Build conversation history for the model (last 10 messages)
+    prior_messages = repos.messages.get_by_conversation(request.conversation_id)
+    model_messages = [
+        {"role": "system", "content": "You are NEXUS AI, a helpful personal assistant. Be concise and natural."}
+    ]
+    for msg in prior_messages[-10:]:
+        model_messages.append({"role": msg.role, "content": msg.content})
+
+    # Generate assistant response via the model service
+    from app.models.schemas import GenerationRequest
+    gen_response = await model_service.generate(
+        GenerationRequest(
+            messages=model_messages,
+            temperature=0.7,
+        )
+    )
+    assistant_content = gen_response.content
+
     assistant_msg = repos.messages.create_message(
         conversation_id=request.conversation_id,
         user_id=user_id,
