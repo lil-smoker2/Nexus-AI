@@ -15,6 +15,7 @@
   - Expanded Phase 13: Life Management Agent as fourth agent, delegation examples updated
 - Phase 0, Step 0.1 — Product requirements and user stories created at `/home/david/Documents/AI/docs/product-requirements.md`
 - Phase 0, Steps 0.2–0.9 — Technical architecture created at `/home/david/Documents/AI/docs/technical-architecture.md` (agents, shared services, permissions, module structure, API/WebSocket conventions, database entities, backend lifecycle, dependencies, cross-cutting requirements)
+- Phase 0, Step 0.2 — Component, data-flow, agent-interaction, execution-state, permission-flow and backend-lifecycle diagrams at `/home/david/Documents/AI/docs/architecture-diagrams.md`
 - Phase 0, Step 0.10 — Git repository initialized (`main` branch, conventional commit branch strategy)
 - Phase 0, Step 0.11 — Linting/testing conventions at `/home/david/Documents/AI/docs/linting-testing-conventions.md`
 - Phase 0, Step 0.12 — Setup and recovery procedures at `/home/david/Documents/AI/docs/setup-recovery.md`
