@@ -30,7 +30,19 @@
 - backend/tests/conftest.py + test_basic.py: 2 tests passing
 - .pytest_cache added to .gitignore
 
-### Steps 0.5–0.12 — Documentation, conventions, setup/recovery
+### Step 0.5 — Create technical documentation (all 10 items)
+- docs/product-requirements.md — Product requirements document ✓
+- docs/technical-architecture.md + docs/architecture-diagrams.md — System architecture ✓
+- docs/database-design.md — Database design ✓
+- docs/api-specification.md — API specification ✓
+- docs/frontend-component-spec.md — Frontend component specification ✓
+- docs/mcp-integration-spec.md — MCP integration specification ✓
+- docs/security-specification.md — Security specification ✓
+- docs/linting-testing-conventions.md — Testing strategy ✓
+- overview + NEXUS_AI_Revised_Master_Roadmap.md — Development roadmap ✓
+- docs/setup-recovery.md — Deployment documentation ✓
+
+### Steps 0.6–0.12 — Documentation, conventions, setup/recovery (covered above)
 - docs/linting-testing-conventions.md: Python/TypeScript/Rust conventions
 - docs/setup-recovery.md: environment setup and recovery procedures
 - README.md, .gitignore
@@ -40,6 +52,7 @@
 - 10b6085: add architecture diagrams for step 0.2
 - 35ff51a: complete step 0.3 Arch Linux environment preparation
 - f5bdb28: establish repository - dependencies and testing structure (step 0.4)
+- f2c5be6: complete step 0.5 technical documentation
 
 ## Phase 0 deliverables
 - docs/product-requirements.md
@@ -49,11 +62,16 @@
 - docs/branch-strategy.md
 - docs/linting-testing-conventions.md
 - docs/setup-recovery.md
+- docs/database-design.md
+- docs/api-specification.md
+- docs/frontend-component-spec.md
+- docs/mcp-integration-spec.md
+- docs/security-specification.md
 - backend/requirements.txt
 - backend/tests/conftest.py
 - backend/tests/test_basic.py (2 passing)
 - README.md, .gitignore
-- Git repo on main (4 commits)
+- Git repo on main (5 commits)
 
 ## Acceptance criteria met
 - Requirements documented
