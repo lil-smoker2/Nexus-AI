@@ -34,6 +34,9 @@ Thumbs.db
 *.log
 logs/
 
+# Pytest
+.pytest_cache/
+
 # Database
 *.sqlite
 *.sqlite3
