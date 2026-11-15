@@ -1,29 +1,42 @@
-"""Chat API router."""
+"""Chat API router with persistent database storage."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-import uuid
+from sqlalchemy.orm import Session
+
+from app.database.session import get_db
+from app.database.repositories.container import Repositories
 
 router = APIRouter()
+
+
+def get_repos(db: Session = Depends(get_db)) -> Repositories:
+    return Repositories(db)
 
 
 class Message(BaseModel):
     id: str
     conversation_id: str
-    role: str  # user, assistant, system, tool
+    role: str
     content: str
-    created_at: str
-    metadata: Optional[dict] = None
+    created_at: datetime
+    metadata_: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
 
 
 class Conversation(BaseModel):
     id: str
     user_id: str
     title: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class SendMessageRequest(BaseModel):
@@ -36,63 +49,65 @@ class SendMessageResponse(BaseModel):
     message: Message
 
 
-# In-memory store for Phase 2 (will be replaced by database in Phase 3)
-_conversations: dict[str, Conversation] = {}
-_messages: dict[str, List[Message]] = {}
+def get_or_create_default_user(repos: Repositories) -> str:
+    user = repos.users.get_by_username("default")
+    if not user:
+        user = repos.users.create_user("default")
+    return user.id
 
 
 @router.get("", response_model=List[Conversation])
-async def list_conversations() -> List[Conversation]:
-    return list(_conversations.values())
+async def list_conversations(repos: Repositories = Depends(get_repos)) -> List[Conversation]:
+    user_id = get_or_create_default_user(repos)
+    return repos.conversations.get_by_user(user_id)
 
 
 @router.post("", response_model=Conversation)
-async def create_conversation(title: str = "New Conversation") -> Conversation:
-    conv = Conversation(
-        id=str(uuid.uuid4()),
-        user_id="default",
-        title=title,
-        created_at=datetime.utcnow().isoformat(),
-        updated_at=datetime.utcnow().isoformat(),
-    )
-    _conversations[conv.id] = conv
-    _messages[conv.id] = []
-    return conv
+async def create_conversation(
+    title: str = "New Conversation",
+    repos: Repositories = Depends(get_repos),
+) -> Conversation:
+    user_id = get_or_create_default_user(repos)
+    return repos.conversations.create_for_user(user_id, title)
 
 
 @router.get("/{conversation_id}/messages", response_model=List[Message])
-async def get_messages(conversation_id: str) -> List[Message]:
-    return _messages.get(conversation_id, [])
+async def get_messages(
+    conversation_id: str,
+    repos: Repositories = Depends(get_repos),
+) -> List[Message]:
+    conversation = repos.conversations.get(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return repos.messages.get_by_conversation(conversation_id)
 
 
 @router.post("/messages", response_model=SendMessageResponse)
-async def send_message(request: SendMessageRequest) -> SendMessageResponse:
-    conv_id = request.conversation_id
-    if conv_id not in _conversations:
-        from fastapi import HTTPException
+async def send_message(
+    request: SendMessageRequest,
+    repos: Repositories = Depends(get_repos),
+) -> SendMessageResponse:
+    conversation = repos.conversations.get(request.conversation_id)
+    if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    user_msg = Message(
-        id=str(uuid.uuid4()),
-        conversation_id=conv_id,
+    user_id = get_or_create_default_user(repos)
+
+    repos.messages.create_message(
+        conversation_id=request.conversation_id,
+        user_id=user_id,
         role="user",
         content=request.content,
-        created_at=datetime.utcnow().isoformat(),
     )
-    _messages.setdefault(conv_id, []).append(user_msg)
 
-    # Echo response for Phase 2 (will be replaced by model integration in Phase 4)
-    assistant_msg = Message(
-        id=str(uuid.uuid4()),
-        conversation_id=conv_id,
+    assistant_content = f"I received your message: '{request.content}'. Model integration coming in Phase 4."
+    assistant_msg = repos.messages.create_message(
+        conversation_id=request.conversation_id,
+        user_id=user_id,
         role="assistant",
-        content=f"I received your message: '{request.content}'. Model integration coming in Phase 4.",
-        created_at=datetime.utcnow().isoformat(),
+        content=assistant_content,
     )
-    _messages[conv_id].append(assistant_msg)
 
-    # Update conversation timestamp
-    conv = _conversations[conv_id]
-    conv.updated_at = datetime.utcnow().isoformat()
+    repos.conversations.update(request.conversation_id, {"updated_at": datetime.utcnow()})
 
-    return SendMessageResponse(conversation_id=conv_id, message=assistant_msg)
+    return SendMessageResponse(conversation_id=request.conversation_id, message=assistant_msg)
