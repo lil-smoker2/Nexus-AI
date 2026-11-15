@@ -93,11 +93,12 @@ Create:
 3. Database design document.
 4. API specification.
 5. Frontend component specification.
-6. MCP integration specification.
-7. Security specification.
-8. Testing strategy.
-9. Development roadmap.
-10. Deployment documentation.
+6. Companion chat experience and visual direction.
+7. MCP integration specification.
+8. Security specification.
+9. Testing strategy.
+10. Development roadmap.
+11. Deployment documentation.
 
 **Completion criteria:** The architecture is documented, dependencies are installed, the repository exists and development can begin without unclear technical responsibilities.
 
@@ -162,7 +163,9 @@ Implement:
 14. Confirmation dialogs.
 15. Reusable cards and panels.
 
-Support dark and light themes.
+Use the companion chat visual direction as the primary desktop reference: restrained dark blue-gray surfaces, soft lavender accents, readable message contrast, and a clear distinction between navigation, companion presence, conversation, and optional context. See `docs/chat-experience.md` and `docs/nexus-ai-chat-preview.svg`.
+
+Support dark and light themes. Theme changes must preserve contrast and hierarchy; do not make color the only indicator of agent or connection state.
 
 ### Step 1.4 — Implement the main application shell
 
@@ -171,14 +174,14 @@ Build:
 - Sidebar.
 - Top navigation.
 - Main content area.
-- Context panel.
+- Optional, collapsible context panel.
 - Status bar.
 - Window controls.
 - Global search.
 - Notification centre.
 - User settings access.
 
-Implement collapsible navigation and resizable workspace panels.
+Implement collapsible navigation and resizable workspace panels. The chat and companion workspace must be able to present a dedicated companion stage beside the central conversation, with the context panel independently collapsible. Keep the conversation and composer usable as the window narrows.
 
 ### Step 1.5 — Build the initial screens
 
@@ -256,6 +259,8 @@ Every dashboard card should retrieve information from a defined backend endpoint
 
 ### Step 2.2 — Chat workspace
 
+Implement the primary companion conversation in the four-area layout defined in `docs/chat-experience.md`: navigation rail, companion stage, conversation, and optional context panel. Keep general chat capabilities available within the same conversation surface.
+
 Implement:
 
 - Conversation list.
@@ -272,6 +277,11 @@ Implement:
 - Streaming responses.
 - Agent selection.
 - Model selection.
+- Dedicated companion avatar and explicit availability/listening state.
+- Context panel with separate user-facing `Thinking` and `Memories` views.
+- Context-panel collapse/restore without losing the selected conversation or scroll position.
+
+The `Thinking` view may summarize user-visible progress or relevant context, but must never expose private chain-of-thought, system prompts, credentials, or unrestricted internal traces. Memory entries must be grounded in stored data and offer the established memory controls. The preview is illustrative; demonstrate data must not be presented as live AI output.
 
 ### Step 2.3 — Coding agent workspace
 
@@ -306,6 +316,8 @@ Create:
 
 ### Step 2.5 — Companion workspace
 
+Implement the companion as the primary chat experience, sharing the navigation, companion-stage, conversation, and context-panel behavior specified in `docs/chat-experience.md`.
+
 Implement:
 
 - Natural chat.
@@ -316,6 +328,8 @@ Implement:
 - Preferences.
 - Conversation summaries.
 - Proactive conversation settings.
+- User-facing activity summaries in place of private internal reasoning.
+- Clear empty, loading, offline, and error states for memory and conversation context.
 
 ### Step 2.6 — MCP management
 
@@ -376,6 +390,8 @@ Test:
 - Long conversations.
 - Large task lists.
 - Panel resizing.
+- Compare the companion chat against `docs/chat-experience.md` and `docs/nexus-ai-chat-preview.svg` at the reference and minimum supported window sizes.
+- Verify context-panel privacy, memory persistence states, keyboard operation, reduced-motion behavior, and that collapsing panels preserves conversation state.
 
 **Completion criteria:** The frontend is complete as an application interface, with all interactions connected to real or explicitly pending backend contracts.
 

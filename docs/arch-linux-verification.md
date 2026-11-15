@@ -41,3 +41,4 @@ Each tool was verified independently by checking its version.
 - System Python is preserved as-is. A project virtual environment will be created for backend dependencies (see `docs/setup-recovery.md`).
 - All Phase 0 required tools are present and verified. No installation was needed.
 - The environment matches the initial target platform: Arch Linux with GNOME and Wayland.
+- UI verification should include the companion chat at both the reference size and the supported minimum desktop size; see `docs/chat-experience.md`.

@@ -84,6 +84,8 @@ Error responses:
 `POST /api/v1/messages` → send a message (returns assistant response or streams via WebSocket)  
 `GET /api/v1/conversations/{id}/messages` → message history
 
+The chat client renders messages in the central conversation area and may display separately authorized activity summaries and saved memories in its context panel. These are distinct from message content. Do not return or stream hidden chain-of-thought, private system prompts, credentials, or unrestricted internal traces as chat or context-panel data.
+
 ### 4.5 Executions
 
 `GET /api/v1/executions` → list executions  
@@ -125,6 +127,8 @@ Events streamed to the frontend for live monitoring:
 
 | Event | Description |
 |---|---|
+| assistant.status | User-facing status such as waiting, generating, completed, failed, or cancelled |
+| assistant.summary | Concise, user-facing context or progress summary; never private chain-of-thought |
 | agent.started | Agent began work |
 | agent.planning | Agent is planning |
 | agent.delegated | Task delegated to agent |
@@ -146,7 +150,7 @@ Events streamed to the frontend for live monitoring:
 | approval.granted | Approval granted |
 | approval.denied | Approval denied |
 
-Each event includes: `event_type`, `timestamp`, `execution_id` (optional), `agent_id` (optional), `data` (event payload).
+Each event includes: `event_type`, `timestamp`, `execution_id` (optional), `agent_id` (optional), `data` (event payload). Events are emitted only after authorization and validation; memory events must not imply persistence until the write succeeds.
 
 ## 6. Pydantic schemas (draft)
 

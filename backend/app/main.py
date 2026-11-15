@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api.routers import health, version
+from app.api.routers import health, version, chat
 
 
 def create_app() -> FastAPI:
@@ -24,6 +24,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/health", tags=["health"])
     app.include_router(version.router, prefix="/version", tags=["version"])
+    app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 
     @app.get("/")
     async def root():

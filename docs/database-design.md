@@ -90,6 +90,8 @@ files (1) ─── (N) file_operations
 | created_at | TIMESTAMP UTC | |
 | metadata | JSONB | optional (model, tokens, agent) |
 
+The interface may display message delivery/generation state, but transient UI state should not be persisted as message content. Any user-facing activity summary persisted with an execution must remain separate from hidden model reasoning.
+
 ### 4.5 executions (persistent execution state)
 
 | Column | Type | Notes |
@@ -144,6 +146,8 @@ files (1) ─── (N) file_operations
 | created_at | TIMESTAMP UTC | |
 | updated_at | TIMESTAMP UTC | |
 | expires_at | TIMESTAMP UTC | nullable |
+
+The context panel may surface relevant memory records, but a suggestion or temporary inference is not a memory record until the user-approved persistence flow succeeds. UI state must not create duplicate or implicit memory writes.
 
 ### 4.8 mcp_servers
 

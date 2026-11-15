@@ -15,6 +15,8 @@ Modular monolith with clear module boundaries. Components can be separated later
 - React/TypeScript UI with Tailwind CSS styling.
 - Tauri commands and events for carefully scoped desktop integration.
 - Frontend communicates with backend through a documented API.
+- The primary companion/chat workspace composes a navigation rail, a dedicated companion stage, a central conversation, and a collapsible context panel. Its visual and responsive behavior is specified in [chat-experience.md](./chat-experience.md).
+- The context panel displays approved, user-facing activity summaries and persisted memory records; it is not a surface for private model reasoning or credentials.
 
 ### 2.2 Backend layer (Python + FastAPI + Pydantic)
 

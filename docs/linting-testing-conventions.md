@@ -42,6 +42,8 @@ pytest backend/tests/
 - React Testing Library for component tests.
 - Playwright for end-to-end desktop UI tests.
 - Tests located alongside source (`*.test.ts`, `*.test.tsx`) or in `__tests__/`.
+- For chat UI changes, cover panel collapse/restore, keyboard access to the composer and context controls, streamed status states, and privacy boundaries for user-facing summaries.
+- Visually verify the chat at the reference and minimum supported desktop window sizes. Screenshot comparisons are useful where stable, but must not replace semantic, accessibility, and interaction tests.
 
 ### Commands (suggested)
 ```

@@ -41,6 +41,7 @@ Scope should match the module or component being changed.
 - Passes lint and typecheck.
 - Includes tests for new behaviour.
 - Updated documentation where relevant.
+- UI changes include an updated design reference or a screenshot-based review note where useful, plus accessibility and minimum-window checks.
 - At least one approval before merge to `develop` or `main`.
 
 ## Workflow

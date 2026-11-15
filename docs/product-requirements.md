@@ -9,6 +9,8 @@ NEXUS AI is a standalone desktop application that acts as a personal AI operatin
 
 It is not merely a chatbot, a code editor extension, a collection of scripts, or a web application opened in a browser. The user launches one desktop application and accesses conversational, coding, computer-control, and personal-organization capabilities from a unified interface.
 
+The primary conversational experience is a companion chat workspace: a persistent navigation rail, a dedicated companion/avatar stage, a central message history with an anchored composer, and an optional context panel for concise user-facing activity and memory controls. The visual reference and interaction requirements are defined in [Chat Experience and Visual Direction](./chat-experience.md).
+
 The system should be able to:
 - Understand a request.
 - Determine what kind of work is required.
@@ -167,6 +169,9 @@ Advanced GUI automation, application adapters, full coding autonomy, life-manage
 
 ### Companion
 - As a user, I want to greet the AI naturally ("Hey", "Good morning") and receive a varied, natural response, so the interaction feels human-like.
+- As a user, I want the companion to have a visible presence beside the conversation, so the chat feels personal without obscuring messages or controls.
+- As a user, I want a concise explanation of relevant context and visible progress, so I can understand what the companion is responding to without being shown hidden internal reasoning.
+- As a user, I want relevant saved memories available in a separate, controllable panel, so I can inspect or correct what the companion remembers.
 - As a user, I want the AI to remember my interests, goals and previous conversations, so I don't have to repeat myself.
 - As a user, I want the AI to follow up on unfinished topics (e.g. an assignment I mentioned earlier), so nothing falls through the cracks.
 - As a user, I want the AI to recognize when I'm frustrated or bored and adjust its tone, so the conversation stays appropriate.
@@ -195,6 +200,8 @@ Advanced GUI automation, application adapters, full coding autonomy, life-manage
 - Stateful execution: every long-running task has a persistent execution record that survives crashes.
 - Least privilege: agents only have the capabilities they need; destructive operations require approval.
 - No fake functionality: every control has a defined behaviour; no decorative buttons.
+- Privacy-aware presentation: the interface may show concise user-facing summaries and verified progress but must not expose hidden chain-of-thought, private prompts, or credentials.
+- Accessible responsive layout: the chat remains readable and operable with keyboard, assistive technology, text scaling, and narrower supported desktop windows.
 - Observable: important operations produce events streamed to the frontend via WebSockets.
 - Untrusted content: website content, documents, downloads and external MCP responses are treated as untrusted input.
 - Recovery: the agent can reconstruct execution state from persistent storage after a crash.

@@ -5,6 +5,23 @@
 
 ## 1. Component architecture
 
+The chat UI is a frontend composition over these services, not a separate AI execution layer:
+
+```mermaid
+flowchart LR
+    Nav["Navigation rail"] --> Chat["Conversation view"]
+    Avatar["Companion stage"] --> Chat
+    Chat --> Composer["Message composer"]
+    Chat --> Context["Context panel"]
+    Context --> Activity["Approved activity summaries"]
+    Context --> Memory["Memory service"]
+    Chat <--> API["REST / WebSocket API"]
+    API <--> Orchestrator["Backend orchestrator"]
+    API <--> DB["Conversation and memory storage"]
+```
+
+The companion avatar is a presentation element. Agent status, messages, activity summaries, and memories must be sourced from their respective application services.
+
 ```mermaid
 graph TD
     subgraph Desktop["Desktop Layer (Tauri)"]

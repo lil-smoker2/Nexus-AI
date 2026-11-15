@@ -119,6 +119,15 @@ Record:
 
 Audit logs are append-only and tamper-evident where possible.
 
+## 11.1 Chat and context-panel privacy
+
+- Treat the companion stage and context panel as presentation surfaces, not permission boundaries.
+- Display only user-facing activity summaries and data the user is authorized to see.
+- Never display hidden chain-of-thought, private system/developer prompts, credentials, or unrestricted internal traces in messages, activity summaries, logs surfaced in the UI, or memory suggestions.
+- Distinguish persisted memories from temporary suggestions. A memory is shown as saved only after the backend confirms persistence.
+- Memory review, correction, and deletion must use the same authorization and audit controls as other memory operations.
+- Clear or refresh stale context after a conversation or backend error; do not present cached private context as current without indicating its status.
+
 ## 12. Security testing
 
 | Test | Description |
@@ -130,6 +139,7 @@ Audit logs are append-only and tamper-evident where possible.
 | Least privilege per agent | Verify each agent has only needed capabilities |
 | MCP server isolation | Verify untrusted servers cannot access unauthorized tools |
 | Prompt injection | Verify external content cannot change policy |
+| Chat context privacy | Verify private prompts, credentials, and hidden reasoning are never rendered in chat or its context panel |
 
 ## 13. Security by phase
 

@@ -1,0 +1,277 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="background" x1="258" y1="0" x2="1350" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#11131B"/>
+      <stop offset="1" stop-color="#0B0D13"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="332" y1="212" x2="1110" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#28204F"/>
+      <stop offset=".58" stop-color="#211C3E"/>
+      <stop offset="1" stop-color="#15192D"/>
+    </linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#775BF0"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientTransform="matrix(1 0 0 .99 0 0)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9D3FF"/>
+      <stop offset=".22" stop-color="#A78BFA"/>
+      <stop offset=".58" stop-color="#7655E8"/>
+      <stop offset="1" stop-color="#4931A4" stop-opacity=".04"/>
+    </radialGradient>
+    <radialGradient id="orbGlow" cx="0" cy="0" r="1" gradientTransform="matrix(0 154 -154 0 0 0)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8872FF" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#8872FF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000" flood-opacity=".22"/>
+    </filter>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <style>
+      text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .muted { fill: #898B9B; }
+      .subtle { fill: #686B7A; }
+      .white { fill: #F7F7FC; }
+      .line { stroke: #262834; }
+      .label { font-size: 11px; font-weight: 650; letter-spacing: 1.15px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#background)"/>
+  <rect x=".5" y=".5" width="1599" height="999" rx="14" stroke="#262832"/>
+
+  <!-- Sidebar -->
+  <path d="M14 14h238v972H14z" fill="#101117"/>
+  <path d="M252 14v972" stroke="#252630"/>
+  <path d="M38 43h34l-17-17-17 17Z" fill="url(#violet)"/>
+  <path d="M42 47h26" stroke="#A78BFA" stroke-width="2" stroke-linecap="round"/>
+  <text x="82" y="46" class="white" font-size="16" font-weight="730" letter-spacing=".7">NEXUS</text>
+  <text x="145" y="46" fill="#A78BFA" font-size="16" font-weight="730" letter-spacing=".7">AI</text>
+  <rect x="200" y="29" width="28" height="28" rx="8" fill="#191A23" stroke="#292A35"/>
+  <path d="M209 38h10M209 43h10M209 48h6" stroke="#777989" stroke-width="1.5" stroke-linecap="round"/>
+
+  <text x="34" y="102" class="subtle label">WORKSPACE</text>
+  <rect x="26" y="118" width="212" height="42" rx="10" fill="#252137" stroke="#332D4E"/>
+  <rect x="26" y="118" width="3" height="42" rx="1.5" fill="#9B83FF"/>
+  <path d="M44 138h14m-7-7v14" stroke="#B5A4FF" stroke-width="1.6" stroke-linecap="round"/>
+  <text x="69" y="143" fill="#F6F2FF" font-size="13" font-weight="600">Overview</text>
+  <text x="34" y="190" class="subtle label">YOUR AGENTS</text>
+
+  <g font-size="13" font-weight="520">
+    <rect x="26" y="203" width="34" height="34" rx="10" fill="#222039"/>
+    <path d="M37 220c0-4 3-7 6-7s6 3 6 7-3 6-6 6-6-2-6-6Zm6-10v2m-9 8h2m14 0h2m-12 8 3-3 3 3" stroke="#B39DFF" stroke-width="1.35" stroke-linecap="round"/>
+    <text x="70" y="225" fill="#D9D9E4">Companion</text>
+    <circle cx="221" cy="220" r="3" fill="#57D6A0"/>
+
+    <rect x="26" y="247" width="34" height="34" rx="10" fill="#192A28"/>
+    <path d="m37 261 4-4 4 4-4 4-4-4Zm9 0 4-4m-4 8 4 4" stroke="#69D7AF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="70" y="269" fill="#B5B6C4">Coding agent</text>
+    <circle cx="221" cy="264" r="3" fill="#57D6A0"/>
+
+    <rect x="26" y="291" width="34" height="34" rx="10" fill="#1B2837"/>
+    <rect x="35" y="300" width="16" height="12" rx="2.5" stroke="#73B8FF" stroke-width="1.4"/>
+    <path d="M40 316h6m-3-4v4" stroke="#73B8FF" stroke-width="1.4" stroke-linecap="round"/>
+    <text x="70" y="313" fill="#B5B6C4">Computer agent</text>
+    <circle cx="221" cy="308" r="3" fill="#57D6A0"/>
+
+    <rect x="26" y="335" width="34" height="34" rx="10" fill="#30261C"/>
+    <path d="M36 345h14v14H36zM39 342v6m8-6v6M39 352h8" stroke="#E8B66C" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="70" y="357" fill="#B5B6C4">Life management</text>
+    <circle cx="221" cy="352" r="3" fill="#57D6A0"/>
+  </g>
+
+  <text x="34" y="412" class="subtle label">TOOLS</text>
+  <g fill="#A1A2B0" font-size="13" font-weight="520">
+    <path d="M39 436h16v16H39zM43 432h16v16" stroke="#777989" stroke-width="1.3" stroke-linejoin="round"/>
+    <text x="70" y="448">Projects</text>
+    <path d="M41 479c0-4 3-7 7-7s7 3 7 7c0 5-7 11-7 11s-7-6-7-11Z" stroke="#777989" stroke-width="1.35"/>
+    <circle cx="48" cy="479" r="2" stroke="#777989" stroke-width="1.2"/>
+    <text x="70" y="485">Memory</text>
+    <circle cx="48" cy="524" r="8" stroke="#777989" stroke-width="1.35"/>
+    <path d="M48 519v5l4 2" stroke="#777989" stroke-width="1.35" stroke-linecap="round"/>
+    <text x="70" y="529">Activity</text>
+    <path d="M41 565h14m-12-4h10m-8 8h6" stroke="#777989" stroke-width="1.45" stroke-linecap="round"/>
+    <text x="70" y="573">Integrations</text>
+    <path d="M42 615h12m-6-6v12m-4-10 8 8m0-8-8 8" stroke="#777989" stroke-width="1.35" stroke-linecap="round"/>
+    <text x="70" y="621">Settings</text>
+  </g>
+
+  <rect x="28" y="866" width="210" height="91" rx="12" fill="#171820" stroke="#282934"/>
+  <circle cx="49" cy="890" r="4" fill="#57D6A0"/>
+  <text x="62" y="894" fill="#E4E4ED" font-size="12" font-weight="600">All systems operational</text>
+  <text x="42" y="920" class="muted" font-size="11">Local workspace</text>
+  <text x="42" y="939" class="subtle" font-size="10">NEXUS AI  ·  v0.1.0</text>
+  <path d="M28 842h210" stroke="#252630"/>
+  <circle cx="47" cy="981" r="13" fill="#333044"/>
+  <text x="47" y="985" text-anchor="middle" fill="#C8BDF7" font-size="10" font-weight="700">D</text>
+  <text x="70" y="979" fill="#E4E4ED" font-size="12" font-weight="600">David</text>
+  <text x="70" y="994" class="subtle" font-size="10">Personal workspace</text>
+  <circle cx="221" cy="981" r="1.7" fill="#8C8D9A"/>
+  <circle cx="221" cy="986" r="1.7" fill="#8C8D9A"/>
+  <circle cx="221" cy="991" r="1.7" fill="#8C8D9A"/>
+
+  <!-- Top bar -->
+  <rect x="253" y="14" width="1333" height="67" fill="#101117" fill-opacity=".72"/>
+  <path d="M253 81h1333" stroke="#252630"/>
+  <path d="M287 41h13m-13 6h13m-13 6h13" stroke="#777989" stroke-width="1.5" stroke-linecap="round"/>
+  <text x="321" y="49" fill="#8E909D" font-size="12">Workspace</text>
+  <path d="m386 45 3 3 3-3" stroke="#686A78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="1038" y="26" width="270" height="38" rx="9" fill="#171820" stroke="#292A35"/>
+  <circle cx="1058" cy="44" r="5.5" stroke="#777989" stroke-width="1.4"/>
+  <path d="m1062 48 4 4" stroke="#777989" stroke-width="1.4" stroke-linecap="round"/>
+  <text x="1075" y="48" fill="#777989" font-size="11">Search anything</text>
+  <rect x="1272" y="35" width="24" height="18" rx="4" fill="#22232D"/>
+  <text x="1284" y="47" text-anchor="middle" fill="#90919D" font-size="9">⌘ K</text>
+  <path d="M1344 39h14m-7-7v14" stroke="#9293A0" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M1398 36c0-2 2-4 4-4s4 2 4 4c0 5 2 6 2 7h-12c0-1 2-2 2-7Zm2 11h4" stroke="#9293A0" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="1408" cy="34" r="3" fill="#A78BFA"/>
+  <path d="M1454 38c0-4 3-7 7-7s7 3 7 7v5c0 4-3 7-7 7s-7-3-7-7v-5Z" stroke="#9293A0" stroke-width="1.3"/>
+  <path d="M1457 39h8m-8 4h6" stroke="#9293A0" stroke-width="1.2" stroke-linecap="round"/>
+  <circle cx="1524" cy="45" r="17" fill="#302A47"/>
+  <text x="1524" y="49" text-anchor="middle" fill="#D8CCFF" font-size="12" font-weight="700">D</text>
+  <path d="m1551 43 4 4 4-4" stroke="#777989" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Main content -->
+  <text x="291" y="123" fill="#9A9CAA" font-size="12">SUNDAY, NOVEMBER 15, 2026</text>
+  <text x="291" y="164" class="white" font-size="29" font-weight="680" letter-spacing="-.7">Good evening, David</text>
+  <text x="291" y="190" class="muted" font-size="13">Your workspace is ready. What would you like to work on?</text>
+  <rect x="1410" y="113" width="147" height="34" rx="8" fill="#171820" stroke="#292A35"/>
+  <circle cx="1428" cy="130" r="3.5" fill="#57D6A0"/>
+  <text x="1440" y="134" fill="#C6C7D2" font-size="11" font-weight="550">AI is ready</text>
+  <path d="m1535 127 4 4 4-4" stroke="#777989" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Hero -->
+  <rect x="286" y="221" width="1271" height="244" rx="18" fill="url(#hero)" stroke="#37304F" filter="url(#shadow)"/>
+  <circle cx="1326" cy="337" r="153" fill="url(#orbGlow)"/>
+  <circle cx="1326" cy="337" r="91" fill="#8D71FF" fill-opacity=".12" filter="url(#glow)"/>
+  <circle cx="1326" cy="337" r="63" fill="url(#orb)"/>
+  <circle cx="1326" cy="337" r="79" stroke="#BBAEFF" stroke-opacity=".16"/>
+  <ellipse cx="1326" cy="337" rx="102" ry="36" transform="rotate(-27 1326 337)" stroke="#C1B4FF" stroke-opacity=".19"/>
+  <ellipse cx="1326" cy="337" rx="101" ry="37" transform="rotate(29 1326 337)" stroke="#C1B4FF" stroke-opacity=".16"/>
+  <circle cx="1412" cy="295" r="3" fill="#D7CEFF"/>
+  <circle cx="1243" cy="373" r="2" fill="#C6BCFF" fill-opacity=".8"/>
+  <circle cx="1378" cy="415" r="2.5" fill="#D4CCFF" fill-opacity=".75"/>
+  <circle cx="1277" cy="284" r="2" fill="#D4CCFF" fill-opacity=".6"/>
+  <rect x="322" y="250" width="112" height="25" rx="12.5" fill="#725AC0" fill-opacity=".23" stroke="#A48BFF" stroke-opacity=".32"/>
+  <circle cx="339" cy="262.5" r="3" fill="#B8A7FF"/>
+  <text x="350" y="266" fill="#D2C5FF" font-size="10" font-weight="650" letter-spacing=".8">YOUR AI WORKSPACE</text>
+  <text x="322" y="319" fill="#FAF9FF" font-size="31" font-weight="670" letter-spacing="-.55">A little more focus.</text>
+  <text x="322" y="357" fill="#FAF9FF" font-size="31" font-weight="670" letter-spacing="-.55">A lot more possible.</text>
+  <text x="323" y="386" fill="#B7B1CF" font-size="12">Your agents, tools, and ideas — all working together.</text>
+  <rect x="322" y="411" width="147" height="35" rx="9" fill="url(#violet)"/>
+  <path d="M341 428h13m-5-5 5 5-5 5" stroke="#FFF" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="364" y="432" fill="#FFF" font-size="11" font-weight="650">Start a conversation</text>
+  <rect x="480" y="411" width="116" height="35" rx="9" fill="#FFFFFF" fill-opacity=".04" stroke="#FFFFFF" stroke-opacity=".15"/>
+  <path d="m499 425 4-4 4 4-4 4-4-4Zm8 0 4-4m-4 8 4 4" stroke="#D3CCEA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="522" y="432" fill="#D9D5E7" font-size="11" font-weight="570">New project</text>
+
+  <!-- Section header and date -->
+  <text x="291" y="510" fill="#F1F1F7" font-size="16" font-weight="650">Your workspace</text>
+  <text x="291" y="531" class="muted" font-size="11">A snapshot of what your AI team is up to.</text>
+  <text x="1549" y="511" text-anchor="end" fill="#878997" font-size="11">Updated just now</text>
+
+  <!-- Agent card -->
+  <rect x="286" y="553" width="406" height="276" rx="14" fill="#15161E" stroke="#282934"/>
+  <text x="309" y="584" fill="#E8E8F0" font-size="13" font-weight="620">Your agents</text>
+  <text x="668" y="584" text-anchor="end" fill="#8E90A0" font-size="10">4 AVAILABLE</text>
+  <path d="M309 601h360" stroke="#282934"/>
+  <rect x="309" y="618" width="34" height="34" rx="10" fill="#25213B"/>
+  <path d="M320 636c0-4 2-7 6-7s6 3 6 7-2 6-6 6-6-2-6-6Zm6-10v2m-9 8h2m14 0h2m-11 8 2-3 2 3" stroke="#B39DFF" stroke-width="1.2" stroke-linecap="round"/>
+  <text x="357" y="633" fill="#E5E5ED" font-size="11" font-weight="590">Companion</text>
+  <text x="357" y="648" fill="#858796" font-size="10">Ready when you are</text>
+  <rect x="611" y="626" width="58" height="21" rx="10.5" fill="#19352D"/>
+  <circle cx="623" cy="636.5" r="3" fill="#57D6A0"/>
+  <text x="633" y="640" fill="#81D8B3" font-size="9" font-weight="600">Online</text>
+  <path d="M309 664h360" stroke="#23242D"/>
+  <rect x="309" y="678" width="34" height="34" rx="10" fill="#192C29"/>
+  <path d="m320 695 4-4 4 4-4 4-4-4Zm8 0 4-4m-4 8 4 4" stroke="#72DDB6" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="357" y="693" fill="#E5E5ED" font-size="11" font-weight="590">Coding agent</text>
+  <text x="357" y="708" fill="#858796" font-size="10">Ready to build with you</text>
+  <rect x="611" y="686" width="58" height="21" rx="10.5" fill="#19352D"/>
+  <circle cx="623" cy="696.5" r="3" fill="#57D6A0"/>
+  <text x="633" y="700" fill="#81D8B3" font-size="9" font-weight="600">Online</text>
+  <path d="M309 724h360" stroke="#23242D"/>
+  <rect x="309" y="738" width="34" height="34" rx="10" fill="#1B2939"/>
+  <rect x="319" y="747" width="14" height="11" rx="2" stroke="#83BFFF" stroke-width="1.2"/>
+  <path d="M323 761h7m-3-3v3" stroke="#83BFFF" stroke-width="1.2" stroke-linecap="round"/>
+  <text x="357" y="753" fill="#E5E5ED" font-size="11" font-weight="590">Computer agent</text>
+  <text x="357" y="768" fill="#858796" font-size="10">Ready to help with tasks</text>
+  <rect x="611" y="746" width="58" height="21" rx="10.5" fill="#19352D"/>
+  <circle cx="623" cy="756.5" r="3" fill="#57D6A0"/>
+  <text x="633" y="760" fill="#81D8B3" font-size="9" font-weight="600">Online</text>
+  <text x="309" y="808" fill="#A494EB" font-size="10" font-weight="600">View all agents</text>
+  <path d="m393 804 4 4-4 4" stroke="#A494EB" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Activity card -->
+  <rect x="710" y="553" width="484" height="276" rx="14" fill="#15161E" stroke="#282934"/>
+  <text x="733" y="584" fill="#E8E8F0" font-size="13" font-weight="620">Recent activity</text>
+  <text x="1171" y="584" text-anchor="end" fill="#A494EB" font-size="10" font-weight="590">View history</text>
+  <path d="M733 601h438" stroke="#282934"/>
+  <circle cx="750" cy="632" r="15" fill="#25213B"/>
+  <path d="M744 632h12m-5-5 5 5-5 5" stroke="#B39DFF" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="779" y="628" fill="#DFDFE9" font-size="11" font-weight="570">Welcome to your new workspace</text>
+  <text x="779" y="645" fill="#858796" font-size="10">Your Nexus AI workspace is ready to explore.</text>
+  <text x="1171" y="636" text-anchor="end" fill="#6F7180" font-size="9">JUST NOW</text>
+  <path d="M733 663h438" stroke="#23242D"/>
+  <circle cx="750" cy="694" r="15" fill="#1B2C28"/>
+  <path d="m744 694 4 4 8-9" stroke="#70D8AE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="779" y="690" fill="#DFDFE9" font-size="11" font-weight="570">All agents checked in</text>
+  <text x="779" y="707" fill="#858796" font-size="10">Companion, Coding, Computer, and Life agents online.</text>
+  <text x="1171" y="698" text-anchor="end" fill="#6F7180" font-size="9">2 MIN AGO</text>
+  <path d="M733 725h438" stroke="#23242D"/>
+  <circle cx="750" cy="756" r="15" fill="#222B3A"/>
+  <path d="M745 751h10v10h-10zM748 748h10v10" stroke="#83BFFF" stroke-width="1.1" stroke-linejoin="round"/>
+  <text x="779" y="752" fill="#DFDFE9" font-size="11" font-weight="570">Workspace connected</text>
+  <text x="779" y="769" fill="#858796" font-size="10">Your local environment is ready to use.</text>
+  <text x="1171" y="760" text-anchor="end" fill="#6F7180" font-size="9">5 MIN AGO</text>
+  <text x="733" y="808" fill="#878997" font-size="10">Your activity and history stay in your workspace.</text>
+
+  <!-- System card -->
+  <rect x="1212" y="553" width="345" height="276" rx="14" fill="#15161E" stroke="#282934"/>
+  <text x="1235" y="584" fill="#E8E8F0" font-size="13" font-weight="620">System status</text>
+  <circle cx="1528" cy="579" r="3.5" fill="#57D6A0"/>
+  <path d="M1235 601h299" stroke="#282934"/>
+  <text x="1235" y="630" fill="#8C8E9C" font-size="10">BACKEND</text>
+  <text x="1235" y="650" fill="#E3E4EC" font-size="12" font-weight="550">Local connection</text>
+  <rect x="1463" y="618" width="71" height="23" rx="11.5" fill="#19352D"/>
+  <circle cx="1477" cy="629.5" r="3" fill="#57D6A0"/>
+  <text x="1487" y="633" fill="#81D8B3" font-size="9" font-weight="600">Connected</text>
+  <path d="M1235 674h299" stroke="#23242D"/>
+  <text x="1235" y="701" fill="#8C8E9C" font-size="10">AI MODEL</text>
+  <text x="1235" y="721" fill="#E3E4EC" font-size="12" font-weight="550">Ready for your first prompt</text>
+  <circle cx="1240" cy="753" r="3" fill="#57D6A0"/>
+  <text x="1252" y="757" fill="#A5A6B2" font-size="10">Private and local-first by design</text>
+  <path d="M1235 783h299" stroke="#23242D"/>
+  <text x="1235" y="808" fill="#9F8DEA" font-size="10" font-weight="590">Configure models</text>
+  <path d="m1324 804 4 4-4 4" stroke="#9F8DEA" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Bottom quick prompts -->
+  <text x="291" y="872" fill="#E5E5ED" font-size="13" font-weight="630">Jump back in</text>
+  <text x="291" y="892" fill="#858796" font-size="10">A few ways to get started</text>
+  <rect x="286" y="910" width="300" height="56" rx="11" fill="#15161E" stroke="#282934"/>
+  <circle cx="312" cy="938" r="13" fill="#25213B"/>
+  <path d="M307 938h10m-5-5v10" stroke="#B39DFF" stroke-width="1.35" stroke-linecap="round"/>
+  <text x="336" y="935" fill="#DCDCE6" font-size="11" font-weight="560">Ask your AI companion</text>
+  <text x="336" y="951" fill="#858796" font-size="9">Think something through</text>
+  <path d="m558 934 4 4-4 4" stroke="#686A78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="600" y="910" width="300" height="56" rx="11" fill="#15161E" stroke="#282934"/>
+  <circle cx="626" cy="938" r="13" fill="#192C29"/>
+  <path d="m621 938 4-4 4 4-4 4-4-4Zm8 0 4-4m-4 8 4 4" stroke="#72DDB6" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="650" y="935" fill="#DCDCE6" font-size="11" font-weight="560">Build something new</text>
+  <text x="650" y="951" fill="#858796" font-size="9">Start a coding task</text>
+  <path d="m872 934 4 4-4 4" stroke="#686A78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="914" y="910" width="280" height="56" rx="11" fill="#15161E" stroke="#282934"/>
+  <circle cx="940" cy="938" r="13" fill="#30261C"/>
+  <path d="M934 935h12v10h-12zM937 932v4m6-4v4m-6 3h6" stroke="#E8B66C" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="964" y="935" fill="#DCDCE6" font-size="11" font-weight="560">Organize your day</text>
+  <text x="964" y="951" fill="#858796" font-size="9">Capture tasks and reminders</text>
+  <path d="m1168 934 4 4-4 4" stroke="#686A78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="1212" y="910" width="345" height="56" rx="11" fill="#171620" stroke="#352C51"/>
+  <circle cx="1240" cy="938" r="14" fill="#29223F"/>
+  <path d="m1240 930 2.4 5.2 5.6.7-4.1 3.8 1.1 5.5-5-2.8-5 2.8 1.1-5.5-4.1-3.8 5.6-.7 2.4-5.2Z" fill="#A992FF"/>
+  <text x="1265" y="935" fill="#DCDCE6" font-size="11" font-weight="560">Make it yours</text>
+  <text x="1265" y="951" fill="#858796" font-size="9">Explore agents and integrations</text>
+  <path d="m1531 934 4 4-4 4" stroke="#8E7BCE" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

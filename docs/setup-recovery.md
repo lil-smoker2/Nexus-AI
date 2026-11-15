@@ -63,6 +63,8 @@ cd ..
 
 Start the backend (FastAPI) and the Tauri frontend in development mode. The Tauri shell manages the backend lifecycle.
 
+Use the SVG in [docs/chat-experience.md](./chat-experience.md) as the visual reference when validating the companion chat workspace. It is a design preview, not a live application screenshot.
+
 ### Production build
 
 ```bash
@@ -109,3 +111,4 @@ If a library does not support the installed Python version, use a separate suppo
 - WebSocket connection opens.
 - Backend shutdown does not leave orphan processes.
 - Application launches and closes cleanly.
+- The companion chat remains usable at the supported minimum window size, including its composer and collapsible context panel.

@@ -76,6 +76,10 @@ Custom servers may be independent MCP processes or internal services exposed thr
 
 Investigate and connect trusted existing servers for: GitHub, documentation, search, cloud storage, additional databases, developer services. Reuse trusted implementations rather than building replacements.
 
+## 6.1 Frontend presentation
+
+The chat context panel may present the status of an MCP-backed action as a concise, user-facing activity summary. It must not expose raw credentials, hidden model reasoning, or unvalidated server output. Show a result as complete only after the backend reports the tool outcome and any required verification; surface failures and permission requests explicitly. The chat layout and context-panel behavior are specified in [chat-experience.md](./chat-experience.md).
+
 ## 7. Tool contract via MCP
 
 Each MCP tool exposed to agents defines:

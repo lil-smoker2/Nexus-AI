@@ -17,12 +17,27 @@
 
 | Region | Component | Responsibility |
 |---|---|---|
-| Left sidebar | `Sidebar` | Collapsible navigation, agent status, window controls |
+| Navigation rail | `Sidebar` | Persistent primary navigation, selected destination, agent access |
 | Top bar | `TopNav` | Global search, notifications, user settings |
 | Main workspace | `MainContent` | Page-level routing (Home, Chat, Companion, etc.) |
-| Context panel | `ContextPanel` | Optional side panel for active task context |
+| Companion stage | `CompanionStage` | Dedicated avatar/presence area beside the active conversation |
+| Context panel | `ContextPanel` | Optional, collapsible panel for user-facing activity summaries and saved memories |
 | Status area | `StatusBar` | Backend connection, agent activity, system resources |
 | Notification centre | `NotificationCentre` | Recent alerts, approvals, events |
+
+The primary chat composition is the navigation rail, companion stage, central conversation, and optional context panel. The conversation remains the visual and interaction priority. The stage must not overlap messages or the composer. The reference composition and responsive rules are maintained in [chat-experience.md](./chat-experience.md) and [nexus-ai-chat-preview.svg](./nexus-ai-chat-preview.svg).
+
+### 2.1 Chat workspace
+
+- **Navigation rail:** Compact and persistent on desktop; clearly marks the selected destination.
+- **Companion stage:** Displays the companion avatar and a short, truthful availability/listening state. Avatar motion is restrained, optional, and respects reduced-motion settings.
+- **Conversation header:** Shows the selected conversation and only meaningful connection/agent status.
+- **Message history:** Scrollable independently of the composer; distinguishes user and assistant messages using attribution, alignment, and subtle surface contrast. Supports Markdown and code rendering.
+- **Composer:** Anchored below message history with accessible send, attachment, and configured voice actions. Supports keyboard send/newline behavior and an announced sending state.
+- **Context panel:** Collapsible independently of the companion stage. Its `Thinking` view contains concise, user-facing activity/context summaries; `Memories` displays persisted, user-manageable memory records. The panel must not expose hidden chain-of-thought, system prompts, credentials, or raw untrusted tool output.
+- **Panel state:** Switching or collapsing context views must not clear the selected conversation, discard a draft, or unexpectedly reset scroll position.
+
+At narrower supported window sizes, allow the companion stage and context panel to collapse independently so the conversation and composer remain available. Provide visible controls to reopen panels. Avoid fixed widths that cause routine horizontal scrolling.
 
 ## 3. Navigation destinations
 
@@ -48,6 +63,8 @@
 - Typography scale
 - Spacing system
 - Border and radius system
+- Dark blue-gray surfaces with restrained lavender accents for the companion chat reference; maintain contrast and semantic state cues in both themes
+- Focus, hover, pressed, disabled, loading, error, and reduced-motion behavior
 
 ### 4.2 Components
 
