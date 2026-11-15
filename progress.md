@@ -16,6 +16,7 @@
 - Phase 0, Step 0.1 — Product requirements and user stories created at `/home/david/Documents/AI/docs/product-requirements.md`
 - Phase 0, Steps 0.2–0.9 — Technical architecture created at `/home/david/Documents/AI/docs/technical-architecture.md` (agents, shared services, permissions, module structure, API/WebSocket conventions, database entities, backend lifecycle, dependencies, cross-cutting requirements)
 - Phase 0, Step 0.2 — Component, data-flow, agent-interaction, execution-state, permission-flow and backend-lifecycle diagrams at `/home/david/Documents/AI/docs/architecture-diagrams.md`
+- Phase 0, Step 0.3 — Arch Linux environment prepared and verified at `/home/david/Documents/AI/docs/arch-linux-verification.md` (Git 2.56.0, Python 3.14.8, pip, venv, Node.js v26.12.1, npm 12.2.1, Rust 1.99.1, Cargo, SQLite 3.54.0; GNOME on Wayland confirmed; Python virtual environment `.venv` created)
 - Phase 0, Step 0.10 — Git repository initialized (`main` branch, conventional commit branch strategy)
 - Phase 0, Step 0.11 — Linting/testing conventions at `/home/david/Documents/AI/docs/linting-testing-conventions.md`
 - Phase 0, Step 0.12 — Setup and recovery procedures at `/home/david/Documents/AI/docs/setup-recovery.md`
@@ -24,6 +25,8 @@
 ## Phase 0 deliverables
 - docs/product-requirements.md
 - docs/technical-architecture.md
+- docs/architecture-diagrams.md
+- docs/arch-linux-verification.md
 - docs/branch-strategy.md
 - docs/linting-testing-conventions.md
 - docs/setup-recovery.md
