@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+  }
+
+  body {
+    @apply bg-slate-900 text-slate-100 antialiased;
+  }
+}

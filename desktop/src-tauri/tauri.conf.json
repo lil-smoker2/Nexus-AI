@@ -1,0 +1,40 @@
+{
+  "productName": "NEXUS AI",
+  "version": "0.1.0",
+  "identifier": "ai.nexus.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: filesystem: tauri: ws:;"
+    },
+    "windows": [
+      {
+        "title": "NEXUS AI",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "center": true,
+        "focus": true,
+        "alwaysOnTop": false,
+        "maximizable": true,
+        "minimizable": true,
+        "closable": true,
+        "skip-taskbar": false
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all"
+  }
+}
