@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.database.repositories.container import Repositories
-from app.services.model_service import model_service
+from app.orchestration.orchestrator import orchestrator
+from app.agents.base import AgentContext, AgentType
 
 router = APIRouter()
 
@@ -101,29 +102,45 @@ async def send_message(
         content=request.content,
     )
 
-    # Build conversation history for the model (last 10 messages)
+    # Build conversation history for the agent (last 10 messages)
     prior_messages = repos.messages.get_by_conversation(request.conversation_id)
-    model_messages = [
+    model_messages: List[dict] = [
         {"role": "system", "content": "You are NEXUS AI, a helpful personal assistant. Be concise and natural."}
     ]
     for msg in prior_messages[-10:]:
         model_messages.append({"role": msg.role, "content": msg.content})
 
-    # Generate assistant response via the model service
-    from app.models.schemas import GenerationRequest
-    gen_response = await model_service.generate(
-        GenerationRequest(
-            messages=model_messages,
-            temperature=0.7,
-        )
+    # Create execution record
+    execution = repos.executions.create_execution(
+        agent_id=AgentType.COMPANION.value,
+        user_objective=request.content,
+        conversation_id=request.conversation_id,
     )
-    assistant_content = gen_response.content
+
+    context = AgentContext(
+        execution_id=execution.id,
+        agent_type=AgentType.COMPANION,
+        conversation_id=request.conversation_id,
+        user_id=user_id,
+        messages=model_messages[1:],  # exclude system for context; agent adds its own system
+    )
+
+    result = await orchestrator.route(context)
+
+    if not result.success:
+        repos.executions.update(execution.id, {"status": "failed", "final_report": result.message})
+        raise HTTPException(status_code=500, detail=result.message)
+
+    repos.executions.update(
+        execution.id,
+        {"status": "completed", "final_report": result.message},
+    )
 
     assistant_msg = repos.messages.create_message(
         conversation_id=request.conversation_id,
         user_id=user_id,
         role="assistant",
-        content=assistant_content,
+        content=result.message,
     )
 
     repos.conversations.update(request.conversation_id, {"updated_at": datetime.utcnow()})

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.api.routers import health, version, chat, models
+from app.api.routers import health, version, chat, models, executions
 from app.database.session import SessionLocal, get_db, init_db
 from app.database.repositories.container import Repositories
 from app.services.model_service import model_service
@@ -46,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(version.router, prefix="/version", tags=["version"])
     app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
     app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
+    app.include_router(executions.router, prefix="/api/v1/executions", tags=["executions"])
 
     @app.get("/")
     async def root():
