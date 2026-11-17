@@ -35,24 +35,38 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - Models API endpoints and chat wired to model service
 - Commit: `0835bbb`
 
+## Completed — Roadmap organization
+- Split the master roadmap's 17 numbered phases (0–16) into individual files in `docs/roadmap/`.
+- Kept `overview` as the phase index and retained the cross-phase engineering guidance, acceptance milestones, development milestones, and product vision there.
+- Added links from the index and navigation between neighboring phase files.
+- Updated `README.md` to point to the split roadmap and corrected the phase count.
+
 ## Completed — Orchestration scaffolding (early Phase 5)
 - Agent base/types and Companion agent implementation
 - Orchestrator routing (companion default) and executions API/router
 - Chat creates execution records and routes through orchestrator/model service
 - Commit: `6c1ff8a`
 
-## This session (uncommitted changes being finalized)
-- **backend/app/core/config.py**: added env-configurable local/online OpenAI-compatible model settings (`LOCAL_MODEL_*`, `ONLINE_MODEL_ENABLED`, `OPENAI_*`)
-- **backend/app/services/model_service.py**: initializes mock + optional local/online providers from config, prefers available local/online model over mock when enabled
-- **backend/.env.example**: documented local (Ollama-style) and online model configuration
-- **backend/tests/test_basic.py**: fixed import so tests run with `PYTHONPATH=.` from `backend/` (2 passed)
+## Completed — MCP runtime and domain servers (initial implementation)
+- **Runtime:** `backend/app/mcp/` — base/tool/result types, `McpManager` (registry/default-server seeding, connect/disconnect, tool discovery, invocation, in-memory audit), internal transport servers auto-connected on startup
+- **Domain servers:** `filesystem` (create/read/write/append/edit/delete/copy/move/list/search/stat/exists, root-scoped), `terminal` (command exec in root), `git` (status/diff/log/branches/show), `database` (SQLite connection/schema/read-only query), `browser` (HTTP fetch/page info/link extract; lazy `httpx` import), `computer` (session info/process list/which/open path), `task_memory` (task & memory CRUD/search backed by DB repos)
+- **API:** `GET/POST /api/v1/mcp/servers*`, tools list/call, audit endpoints (`backend/app/api/routers/mcp.py`), wired in `backend/app/main.py` startup/shutdown
+- **Frontend:** `desktop/src/features/mcp/MCPPage.tsx` now loads real servers/tools from backend and supports connect/disconnect + tool invocation with JSON args/results
+- **Docs:** MCP specs split into per-domain docs under `docs/mcp/` with filesystem creation guide (commits `bfbed25` context) — implementation now covers the core documented operations for each domain server
+- **Tests:** `backend/tests/test_mcp.py` — server registration/connection, filesystem create/list/copy/delete flow, terminal exec + git status, database inspect, task/memory operations
+
+## Completed — Model config (prior uncommitted, now tracked)
+- **backend/app/core/config.py**, **backend/app/services/model_service.py**: env-configurable local/online OpenAI-compatible providers with mock fallback
+- **backend/.env.example**, **backend/tests/test_basic.py** fixed
+- Commit: `cdd1d67`
 
 ## Verification
-- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → 2 passed
-- `python -m compileall` on modified backend modules/tests → OK
+- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **6 passed** (23 deprecation warnings from SQLAlchemy utcnow/pytest-asyncio config)
+- `python -m compileall` on backend app/tests → OK
 
 ## In Progress
 - Phase 5: complete central execution loop/state machine, richer task planning/checkpoint/resume behavior, and end-to-end execution verification
+- MCP hardening: external stdio/Streamable HTTP transports, stronger permission/approval enforcement, schema/output validation, persistent audit, and full parity with every spec edge case
 
 ## Blocked
 - (none)
@@ -62,5 +76,5 @@ All 12 steps done — see commit history. Deliverables in docs/.
 
 ## Notes
 - Repository: https://github.com/lil-smoker2/Nexus-AI (SSH remote)
-- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (also `overview` has earlier edits)
-- Next: continue Phase 5 per roadmap (orchestration/execution engine hardening) and keep progress log updated per step/milestone
+- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`overview` and `docs/roadmap/` have local edits in worktree)
+- Next: continue Phase 5 per roadmap and iterate MCP hardening/integration with agents and permission system as needed
