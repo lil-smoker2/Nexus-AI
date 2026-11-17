@@ -1,7 +1,5 @@
 """Basic backend tests establishing the testing structure."""
 
-from backend.tests.conftest import sample_task
-
 
 def test_sample_task_fixture(sample_task):
     """The sample_task fixture provides a valid task dict."""

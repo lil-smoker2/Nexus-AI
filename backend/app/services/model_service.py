@@ -7,6 +7,7 @@ Providers are registered by name; one model is active at a time.
 import asyncio
 from typing import Any, Dict, List, Optional
 
+from app.core.config import settings
 from app.models.providers.base import (
     GenerationConfig,
     ModelInfo,
@@ -44,13 +45,52 @@ class ModelService:
         self._lock = asyncio.Lock()
 
     async def initialize(self) -> None:
-        """Initialize all configured providers."""
-        # Always register the mock provider for local testing
+        """Initialize providers from config (mock + optional local/online OpenAI-compatible)."""
+        # Always register mock as fallback
         mock = MockModelProvider()
         await mock.initialize()
         self._providers["mock"] = mock
         self._active_model_id = "mock-local"
         self._active_provider_name = "mock"
+
+        # Local OpenAI-compatible (e.g. Ollama)
+        if settings.LOCAL_MODEL_ENABLED:
+            local = OpenAICompatibleProvider(
+                config={
+                    "api_key": settings.LOCAL_MODEL_API_KEY,
+                    "base_url": settings.LOCAL_MODEL_BASE_URL,
+                    "default_model": settings.LOCAL_MODEL_DEFAULT_MODEL,
+                }
+            )
+            try:
+                await local.initialize()
+                self._providers["local"] = local
+                # Prefer local if available
+                if await local.is_available():
+                    self._active_model_id = settings.LOCAL_MODEL_DEFAULT_MODEL
+                    self._active_provider_name = "local"
+            except Exception:
+                pass
+
+        # Online/OpenAI-compatible cloud
+        if settings.ONLINE_MODEL_ENABLED and (settings.OPENAI_API_KEY or settings.OPENAI_BASE_URL):
+            cloud_cfg: Dict[str, Any] = {
+                "api_key": settings.OPENAI_API_KEY or None,
+                "default_model": settings.OPENAI_DEFAULT_MODEL,
+            }
+            if settings.OPENAI_BASE_URL:
+                cloud_cfg["base_url"] = settings.OPENAI_BASE_URL
+            cloud = OpenAICompatibleProvider(config=cloud_cfg)
+            try:
+                await cloud.initialize()
+                self._providers["openai"] = cloud
+                # Prefer online if no local picked and online is available
+                if not settings.LOCAL_MODEL_ENABLED or self._active_provider_name == "mock":
+                    if await cloud.is_available():
+                        self._active_model_id = settings.OPENAI_DEFAULT_MODEL
+                        self._active_provider_name = "openai"
+            except Exception:
+                pass
 
     async def shutdown(self) -> None:
         """Shut down all providers."""
@@ -79,6 +119,7 @@ class ModelService:
 
     def get_active_model_id(self) -> Optional[str]:
         return self._active_model_id
+
 
     async def list_providers(self) -> ProvidersResponse:
         """List all registered providers with availability and models."""

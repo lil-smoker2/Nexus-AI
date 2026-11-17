@@ -13,6 +13,18 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-change-in-production"
     DATABASE_URL: str = "sqlite:///./nexus_ai.db"
 
+    # Local model (OpenAI-compatible endpoint, e.g. Ollama: http://localhost:11434/v1)
+    LOCAL_MODEL_ENABLED: bool = False
+    LOCAL_MODEL_BASE_URL: str = "http://localhost:11434/v1"
+    LOCAL_MODEL_API_KEY: str = "ollama"
+    LOCAL_MODEL_DEFAULT_MODEL: str = "llama3"
+
+    # Online/OpenAI-compatible cloud model
+    ONLINE_MODEL_ENABLED: bool = False
+    OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str | None = None  # e.g. https://api.openai.com/v1 (leave None for default)
+    OPENAI_DEFAULT_MODEL: str = "gpt-3.5-turbo"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

@@ -2,9 +2,12 @@
 
 ## Status
 - Phase 0: COMPLETE (all 12 steps)
-- Phase 1: COMPLETE (Step 1 — Desktop shell and backend foundation)
-- Phase 2: COMPLETE (Frontend implementation — all screens)
-- Phase 3–17: PENDING
+- Phase 1: COMPLETE (desktop shell and backend foundation)
+- Phase 2: COMPLETE (frontend implementation — all screens)
+- Phase 3: COMPLETE (database layer and persistence)
+- Phase 4: COMPLETE (model integration layer)
+- Phase 5: IN PROGRESS (orchestration/execution scaffolding present; execution loop & state machine hardening pending)
+- Phase 6–17: PENDING
 
 ## Completed — Phase 0 (Requirements, design and development preparation)
 All 12 steps done — see commit history. Deliverables in docs/.
@@ -12,57 +15,44 @@ All 12 steps done — see commit history. Deliverables in docs/.
 ## Completed — Phase 1 (Desktop shell and backend foundation)
 - **desktop/** — Tauri v2 project with React + TypeScript + Tailwind CSS
 - **backend/** — Python FastAPI application with health and version endpoints
-- Backend verified responding on http://127.0.0.1:8000
-- Commit: 84ab4c2 on main, pushed to GitHub
+- Commits: `84ab4c2`, `c9eb0ac`
 
 ## Completed — Phase 2 (Frontend implementation — all screens)
-**Design system** (`desktop/src/components/ui/`):
-- Button, Input, Label, Card, Badge, Modal, Alert, LoadingSpinner, EmptyState, Notification components
+- Design system and 13 feature screens wired in `desktop/src/App.tsx`
+- Initial chat API integration
+- Commit: `c28d1f4`
 
-**Feature screens** (`desktop/src/features/`):
-- **Home** — Dashboard with agent availability, active tasks, weather/time widget, backend status, quick actions
-- **Chat** — Full messaging workspace with conversation list, real message send/receive via FastAPI backend API, timestamps, auto-scroll
-- **Companion** — Personal AI companion with conversation, memory store, goals with progress bars, unresolved topic tracking, natural responses
-- **Coding Agent** — File explorer with copy/delete widgets, side-by-side original vs copied file comparison, specs-moved verification indicator, tool activity log
-- **Computer Agent** — System info (Arch Linux, GNOME Wayland), app control (launch/stop), terminal with command execution
-- **Life Management** — Tasks with categories, due dates, priorities, completion tracking, schedule, daily summary
-- **Tasks** — Task list with status filter, priority badges, status transition controls
-- **Workspaces** — Project workspace list with language, file count, git status, last opened
-- **Memory** — Memory centre with categories, search, inspect/correct/delete controls
-- **MCP** — MCP server management with transport type, status, tool count, connect/disconnect
-- **Models** — Model provider configuration (local/cloud), capabilities, integrations
-- **Activity** — Event log with agent attribution, timestamps, type badges
-- **Settings** — Appearance (dark/light), proactive engagement toggle, quiet hours, backup/restore
+## Completed — Phase 3 (Database layer and persistence)
+- SQLAlchemy models, Alembic migrations, DB session/init (`nexus_ai.db`)
+- Repository/container layer for users, conversations/messages, tasks, executions, memory, settings, approvals, MCP servers
+- Persistent chat API backed by DB
+- Commit: `08df74e`
 
-**App shell** (`desktop/src/App.tsx`):
-- Full sidebar navigation with all 13 destinations
-- Theme toggle (dark/light)
-- Backend connect/disconnect with Tauri command integration
-- Notification system with toast-style alerts
-- All screens wired and routable
+## Completed — Phase 4 (Model integration layer)
+- Provider interface and schemas (`app/models/providers`, `app/models/schemas.py`)
+- Mock provider and OpenAI-compatible provider adapter
+- `ModelService` for provider lifecycle, model selection, and generation routing
+- Models API endpoints and chat wired to model service
+- Commit: `0835bbb`
 
-**Backend API** (`backend/app/api/routers/chat.py`):
-- GET/POST /api/v1/chat — conversation CRUD
-- GET /api/v1/chat/{id}/messages — message history
-- POST /api/v1/chat/messages — send message with echo response
+## Completed — Orchestration scaffolding (early Phase 5)
+- Agent base/types and Companion agent implementation
+- Orchestrator routing (companion default) and executions API/router
+- Chat creates execution records and routes through orchestrator/model service
+- Commit: `6c1ff8a`
 
-**Verification:**
-- Frontend: `npm run build` passes (TypeScript + Vite)
-- Rust: `cargo build` passes
-- Backend: FastAPI health/version/chat endpoints verified
+## This session (uncommitted changes being finalized)
+- **backend/app/core/config.py**: added env-configurable local/online OpenAI-compatible model settings (`LOCAL_MODEL_*`, `ONLINE_MODEL_ENABLED`, `OPENAI_*`)
+- **backend/app/services/model_service.py**: initializes mock + optional local/online providers from config, prefers available local/online model over mock when enabled
+- **backend/.env.example**: documented local (Ollama-style) and online model configuration
+- **backend/tests/test_basic.py**: fixed import so tests run with `PYTHONPATH=.` from `backend/` (2 passed)
 
-**Commit:** Phase 2 committed and pushed to GitHub (main branch)
-
-## Phase 2 acceptance criteria met
-- All 13 screens implemented and navigable
-- Design system with reusable components
-- Real backend API integration (chat messaging)
-- Copy/delete widgets with side-by-side file comparison (Coding Agent)
-- Companion with memory, goals, unresolved topics
-- Theme toggle, notifications, backend connection management
+## Verification
+- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → 2 passed
+- `python -m compileall` on modified backend modules/tests → OK
 
 ## In Progress
-- (none — ready for Phase 3)
+- Phase 5: complete central execution loop/state machine, richer task planning/checkpoint/resume behavior, and end-to-end execution verification
 
 ## Blocked
 - (none)
@@ -72,4 +62,5 @@ All 12 steps done — see commit history. Deliverables in docs/.
 
 ## Notes
 - Repository: https://github.com/lil-smoker2/Nexus-AI (SSH remote)
-- Next: Phase 3 — Database layer and persistence (SQLite + Alembic, execution state, memories, tasks)
+- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (also `overview` has earlier edits)
+- Next: continue Phase 5 per roadmap (orchestration/execution engine hardening) and keep progress log updated per step/milestone
