@@ -60,17 +60,21 @@ MCP (Model Context Protocol) is an integration protocol, **not** the entire inte
 | Server health monitoring | Track connectivity and error rates |
 | Audit trails | Log all MCP tool calls and responses |
 
-## 5. Initial custom MCP servers (build on need)
+## 5. Domain MCP specifications (divided by MCP)
 
-1. Filesystem — list, read, write, create, search, metadata, move, copy
-2. Terminal — execute commands, retrieve output, inspect processes
-3. Browser — sessions, navigation, page inspection, clicks, forms, downloads
-4. Database — connect, inspect schema, execute permitted queries
-5. Git — inspect repo, status, diffs, branches, commits
-6. Computer Automation — windows, screenshots, accessibility, input
-7. Task and Memory — create tasks, retrieve TODOs, search memories
+MCPs are split into per-domain specs under [`docs/mcp/`](./mcp/). Each spec defines scope, prerequisites, operations/tools, safety/verification, and (where applicable) a step-by-step guide to create the MCP.
 
-Custom servers may be independent MCP processes or internal services exposed through MCP wrappers. Do not duplicate the core execution engine inside each server.
+| MCP | Spec | Operations summary |
+|---|---|---|
+| Filesystem | [mcp/filesystem.md](./mcp/filesystem.md) | **File & directory ops:** create file/dir, read, write/edit/append, delete file/dir, copy, move/rename, list, search/glob/content search, stat/exists. Includes **step-by-step MCP creation** (scope/roots & permissions → scaffold/transport → initialize & `tools/list` → implement handlers with path validation → verify/audit → register → test) and example schemas/flows. |
+| Terminal | [mcp/terminal.md](./mcp/terminal.md) | Execute commands, retrieve/stream output, inspect/kill managed processes (policy-gated). |
+| Browser | [mcp/browser.md](./mcp/browser.md) | Sessions, navigation, page/DOM inspection, click/type/select/submit, waits, downloads, screenshots. |
+| Database | [mcp/database.md](./mcp/database.md) | List connections, inspect schema, execute permitted (parameterized/bounded) queries, explain. |
+| Git | [mcp/git.md](./mcp/git.md) | Status/diff/log/show/branches (inspect) and gated add/commit/checkout/push/pull operations. |
+| Computer Automation | [mcp/computer-automation.md](./mcp/computer-automation.md) | Session/window/app inspection, capture/accessibility/OCR, gated focus/launch/input actions. |
+| Task and Memory | [mcp/task-memory.md](./mcp/task-memory.md) | Task/TODO create/update/list/status and memory store/search/retrieve/update/delete. |
+
+Custom servers may be independent MCP processes or internal services exposed through MCP wrappers. Do not duplicate the core execution engine inside each server. See [mcp/README.md](./mcp/README.md) for the index.
 
 ## 6. External MCP server integration
 
