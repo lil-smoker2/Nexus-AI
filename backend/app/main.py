@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.api.routers import health, version, chat, models, executions, mcp
+from app.api.routers import health, version, chat, models, executions, mcp, tasks
 from app.database.session import SessionLocal, get_db, init_db
 from app.database.repositories.container import Repositories
 from app.services.model_service import model_service
@@ -50,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
     app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
     app.include_router(executions.router, prefix="/api/v1/executions", tags=["executions"])
+    app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
     app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])
 
     @app.get("/")

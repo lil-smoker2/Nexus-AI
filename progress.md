@@ -6,8 +6,8 @@
 - Phase 2: COMPLETE (frontend implementation — all screens)
 - Phase 3: COMPLETE (database layer and persistence)
 - Phase 4: COMPLETE (model integration layer)
-- Phase 5: IN PROGRESS (orchestration/execution scaffolding present; execution loop & state machine hardening pending)
-- Phase 6–17: PENDING
+- Phase 5: COMPLETE (planning, TODO and autonomous execution engine)
+- Phase 6–17: PENDING (next: Phase 6 — MCP infrastructure and custom MCP servers hardening/integration)
 
 ## Completed — Phase 0 (Requirements, design and development preparation)
 All 12 steps done — see commit history. Deliverables in docs/.
@@ -61,12 +61,22 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - Commit: `cdd1d67`
 
 ## Verification
-- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **6 passed** (23 deprecation warnings from SQLAlchemy utcnow/pytest-asyncio config)
-- `python -m compileall` on backend app/tests → OK
+- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **13 passed** (280 warnings: SQLAlchemy `utcnow` deprecations and pytest-asyncio default loop-scope notice)
+- `python -m compileall backend/app backend/tests` → OK
+
+## Completed — Phase 5 (Planning, TODO and autonomous execution engine)
+- **Planner/decomposition:** `backend/app/execution/planner.py` — transforms objectives into structured plans/tasks (objective, description, expected result, subtasks field, dependencies, required tools, completion conditions, risks, actions), heuristic extraction/decomposition/ordering, missing-info/clarification detection, workflow plans (create folder/files, install package, build app, diagnose/organize)
+- **TODO manager:** `backend/app/execution/todo_manager.py` — persistent task ops (create/read/update/delete/complete/reopen/prioritize/assign/block/retry) and dependency-aware next-executable selection
+- **Execution engine/loop:** `backend/app/execution/engine.py` — plan materialization, dependency-respecting execution loop, tool/action execution via MCP, status updates, checkpoints, pause/resume/stop/retry, interruption recovery, task/execution history (tool calls/results, errors, verification evidence, approvals/checkpoints), and verified completion reports
+- **APIs:** `backend/app/api/routers/tasks.py` (CRUD + complete/reopen/block/retry) and enhanced `backend/app/api/routers/executions.py` (create+run, status with full history, pause/resume/stop/retry/checkpoint), wired in `backend/app/main.py`
+- **Tests:** `backend/tests/test_phase5_execution.py` — planner structure, folder/files workflow, dependency ordering, TODO CRUD/status ops, pause/resume/stop/checkpoint, history/report fields, build-app workflow
+- **Computer MCP (Arch/GNOME Wayland aware):** `backend/app/mcp/servers/computer.py` expanded with capability reporting and supported OS controls (session/process/app discovery, open URI/path, notifications, audio, brightness, media, clipboard) and explicit reporting for compositor-restricted screenshot/input/window control
 
 ## In Progress
-- Phase 5: complete central execution loop/state machine, richer task planning/checkpoint/resume behavior, and end-to-end execution verification
-- MCP hardening: external stdio/Streamable HTTP transports, stronger permission/approval enforcement, schema/output validation, persistent audit, and full parity with every spec edge case
+- (none — ready for Phase 6)
+
+## Next
+- Phase 6: MCP infrastructure hardening and custom/external server integration (external stdio/Streamable HTTP transports, richer permission/approval/schema validation/persistent audit, agent-tool integration, and per-server parity per `docs/mcp/*` and `docs/roadmap/phase-06.md`)
 
 ## Blocked
 - (none)
@@ -76,5 +86,5 @@ All 12 steps done — see commit history. Deliverables in docs/.
 
 ## Notes
 - Repository: https://github.com/lil-smoker2/Nexus-AI (SSH remote)
-- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`overview` and `docs/roadmap/` have local edits in worktree)
-- Next: continue Phase 5 per roadmap and iterate MCP hardening/integration with agents and permission system as needed
+- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`docs/roadmap/phase-06.md` onward); `overview`, `README.md`, and `docs/roadmap/` may have local worktree edits
+- Next: proceed to Phase 6 per roadmap (`docs/roadmap/phase-06.md`) and continue MCP/agent/permission hardening
