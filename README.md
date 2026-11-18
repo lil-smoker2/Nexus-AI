@@ -4,7 +4,8 @@ Autonomous multi-agent desktop AI application.
 
 ## Roadmap
 
-- `overview` — Master Software Development Roadmap (16 phases)
+- `overview` — Master Software Development Roadmap index and cross-phase guidance (17 phases)
+- `docs/roadmap/` — Detailed roadmap, split into one file per phase
 - `NEXUS_AI_Revised_Master_Roadmap.md` — Implementation-oriented specification (17 phases)
 - `docs/` — Product requirements, technical architecture, and UI specifications
 
