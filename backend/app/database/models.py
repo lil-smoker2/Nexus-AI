@@ -148,16 +148,23 @@ class McpServer(Base):
     id = Column(String, primary_key=True, default=guid)
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    transport = Column(String, nullable=False)  # stdio / streamable_http
+    transport = Column(String, nullable=False)  # internal / stdio / streamable_http
     endpoint = Column(String, nullable=False)
     args = Column(JSON, nullable=True, default=list)
     env = Column(JSON, nullable=True, default=dict)
     auth_config = Column(JSON, nullable=True, default=dict)
+    config = Column(JSON, nullable=True, default=dict)  # extra: cwd, headers, timeout, allowlisted tools, etc.
+    enabled = Column(Boolean, nullable=False, default=True)
     connection_state = Column(String, nullable=False, default="disconnected")  # connected / disconnected / error
     discovered_tools = Column(JSON, nullable=True, default=list)
     permissions = Column(JSON, nullable=True, default=dict)
+    server_info = Column(JSON, nullable=True, default=dict)
+    capabilities = Column(JSON, nullable=True, default=dict)
+    last_error = Column(Text, nullable=True)
+    last_connected_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 
 class Approval(Base):
@@ -174,3 +181,19 @@ class Approval(Base):
     decided_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="approvals")
+
+
+class McpAuditEvent(Base):
+    __tablename__ = "mcp_audit_events"
+
+    id = Column(String, primary_key=True, default=guid)
+    server_id = Column(String, nullable=True, index=True)
+    server_name = Column(String, nullable=True)
+    tool_name = Column(String, nullable=True, index=True)
+    action = Column(String, nullable=False, default="tool_call")  # tool_call/connect/disconnect/discover/error
+    success = Column(Boolean, nullable=False, default=False)
+    arguments = Column(JSON, nullable=True)
+    result = Column(JSON, nullable=True)
+    error = Column(Text, nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -1,10 +1,8 @@
-"""Computer Automation MCP server: OS/session control primitives.
+"""Computer Automation MCP server: OS/session control primitives and adapter boundary.
 
-Works on Arch Linux; on GNOME Wayland some UI automation (global input injection,
-arbitrary screen capture, window enumeration/control) is restricted by the compositor
-and available permissions/tools. Supported controls (open/launch, notifications,
-audio, brightness, media, clipboard, app/process/session inspection) are exposed
-with capability reporting.
+Works on Arch Linux; on GNOME Wayland some UI automation is restricted by the
+compositor/permissions. This server reports capabilities explicitly and delegates
+desktop actions to available system tools/backends (service-adapter boundary).
 """
 
 from __future__ import annotations
@@ -16,7 +14,6 @@ import shutil
 import subprocess
 import tempfile
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.mcp.base import BaseMcpServer, McpServerConfig, ToolDefinition, ToolResult
@@ -41,6 +38,7 @@ class ComputerAutomationMcpServer(BaseMcpServer):
         t(ToolDefinition("computer.list_processes", "List running processes (top)", {"type": "object", "properties": {"limit": {"type": "integer"}}}, "read"), self.list_processes)
         t(ToolDefinition("computer.which", "Locate an executable", {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}, "read"), self.which)
         t(ToolDefinition("computer.list_applications", "List installed desktop applications", {"type": "object", "properties": {"limit": {"type": "integer"}}}, "read"), self.list_applications)
+        t(ToolDefinition("computer.list_windows", "List desktop windows if a supported backend is available", {"type": "object", "properties": {}}, "read"), self.list_windows)
         # Open / launch / notify
         t(ToolDefinition("computer.open_path", "Open a file or path with the default handler (xdg-open)", {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}, "execute"), self.open_path)
         t(ToolDefinition("computer.open_uri", "Open a URL or URI with the default handler (xdg-open/gio)", {"type": "object", "properties": {"uri": {"type": "string"}}, "required": ["uri"]}, "execute"), self.open_uri)
@@ -58,10 +56,9 @@ class ComputerAutomationMcpServer(BaseMcpServer):
         # Clipboard
         t(ToolDefinition("computer.clipboard_get", "Read clipboard text (wl-paste on Wayland)", {"type": "object", "properties": {}}, "read"), self.clipboard_get)
         t(ToolDefinition("computer.clipboard_set", "Write clipboard text (wl-copy on Wayland)", {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}, "execute"), self.clipboard_set)
-        # UI automation (may be restricted on Wayland)
+        # UI automation (may be restricted)
         t(ToolDefinition("computer.screenshot", "Capture a screenshot to a file if compositor/permissions allow", {"type": "object", "properties": {"path": {"type": "string"}}, "required": []}, "execute"), self.screenshot)
         t(ToolDefinition("computer.input_text", "Type text via virtual keyboard if supported by compositor", {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}, "execute"), self.input_text)
-        t(ToolDefinition("computer.list_windows", "List desktop windows if a supported backend is available", {"type": "object", "properties": {}}, "read"), self.list_windows)
 
     # ---- helpers ----
     def _session(self) -> Dict[str, Any]:
@@ -95,17 +92,17 @@ class ComputerAutomationMcpServer(BaseMcpServer):
         caps["audio"] = {"supported": bool(shutil.which("pactl"))}
         caps["brightness"] = {"supported": bool(shutil.which("brightnessctl"))}
         caps["media"] = {"supported": bool(shutil.which("playerctl"))}
-        caps["clipboard"] = {"supported": bool(shutil.which("wl-copy") and shutil.which("wl-paste")) if sess.get("session_type") == "wayland" else bool((shutil.which("wl-copy") and shutil.which("wl-paste")) or shutil.which("xclip") or shutil.which("xsel"))}
+        caps["clipboard"] = {"supported": bool(shutil.which("wl-copy") and shutil.which("wl-paste"))}
         caps["process_list"] = {"supported": bool(shutil.which("ps"))}
         caps["list_applications"] = {"supported": True}
-        # restricted on GNOME Wayland without extra perms/backends
-        caps["screenshot"] = {"supported": False, "reason": "Wayland compositor/portal screen capture not available non-interactively in this session (grim/portal restricted)"}
-        caps["input_injection"] = {"supported": False, "reason": "Compositor virtual keyboard/pointer protocols not exposed (wtype/ydotool unavailable or unsupported)"}
-        caps["window_control"] = {"supported": False, "reason": "GNOME Shell window introspection/control APIs restricted (Shell.Eval disabled) and no Wayland window-management backend available"}
+        caps["window_control"] = {"supported": False, "reason": "No supported window management backend available in this session"}
+        caps["screenshot"] = {"supported": bool(shutil.which("grim")), "reason": "grim requires compositor screencopy support/permissions" if shutil.which("grim") else "No screenshot backend (grim/portal) available"}
+        caps["input_injection"] = {"supported": bool(shutil.which("wtype") or shutil.which("ydotool")), "reason": "Virtual input requires supported compositor/tool permissions"}
         notes = []
         if sess.get("session_type") == "wayland":
-            notes.append("Running on Wayland: global screenshot/input/window control is compositor-restricted; use supported controls (open/notify/audio/brightness/media/clipboard/apps) or configure portal/AT-SPI/input backends for deeper automation.")
-        return ToolResult(success=True, content={"session": sess, "capabilities": caps, "notes": notes, "works_on_arch_linux": True})
+            notes.append("Wayland session: screenshot/input/window control depend on compositor permissions and available backends; capability results reflect this host.")
+        notes.append("Desktop UI automation is exposed via capability-gated adapters; configure portal/AT-SPI/input backends for deeper control where permitted.")
+        return ToolResult(success=True, content={"session": sess, "capabilities": caps, "notes": notes, "works_on_arch_linux": True, "adapter": "system-tools"})
 
     def list_processes(self, args: Dict[str, Any]) -> ToolResult:
         limit = int(args.get("limit", 30))
@@ -178,6 +175,9 @@ class ComputerAutomationMcpServer(BaseMcpServer):
             if len(apps) >= limit:
                 break
         return ToolResult(success=True, content={"applications": apps, "count": len(apps)})
+
+    def list_windows(self, args: Dict[str, Any]) -> ToolResult:
+        return ToolResult(success=False, error="Window listing/control not supported by available backend in this session", content={"windows": [], "session": self._session(), "supported": False})
 
     # ---- open / notify ----
     def _xdg_open(self, target: str) -> ToolResult:
@@ -291,7 +291,6 @@ class ComputerAutomationMcpServer(BaseMcpServer):
             proc = _run([tool, "-m"], timeout=5)
             if proc.returncode != 0:
                 return ToolResult(success=False, error=proc.stderr.strip() or "failed to get brightness")
-            # machine format: device,class,current,percent,max
             raw = proc.stdout.strip()
             parts = raw.split(",") if raw else []
             info = {"raw": raw}
@@ -363,7 +362,6 @@ class ComputerAutomationMcpServer(BaseMcpServer):
             try:
                 proc = _run(["wl-paste", "--no-newline"], timeout=5)
                 if proc.returncode != 0:
-                    # empty clipboard or no offer can be non-zero sometimes; return empty-ish
                     return ToolResult(success=True, content={"text": "", "available": True, "note": proc.stderr.strip() or "no text"})
                 return ToolResult(success=True, content={"text": proc.stdout, "available": True})
             except Exception as e:
@@ -385,16 +383,15 @@ class ComputerAutomationMcpServer(BaseMcpServer):
     # ---- restricted UI automation ----
     def screenshot(self, args: Dict[str, Any]) -> ToolResult:
         path = str(args.get("path") or os.path.join(tempfile.gettempdir(), f"nexus_screenshot_{int(time.time())}.png"))
-        # grim only works if compositor supports screencopy protocol
         if shutil.which("grim"):
             try:
                 proc = _run(["grim", path], timeout=10)
                 if proc.returncode == 0 and os.path.exists(path):
-                    return ToolResult(success=True, content={"path": path, "captured": True})
-                return ToolResult(success=False, error=(proc.stderr.strip() or "Screenshot not supported by current Wayland compositor/session"), content={"path": path})
+                    return ToolResult(success=True, content={"path": path, "captured": True, "exists": True})
+                return ToolResult(success=False, error=(proc.stderr.strip() or "Screenshot not supported by current compositor/session"), content={"path": path, "captured": False})
             except Exception as e:
                 return ToolResult(success=False, error=str(e))
-        return ToolResult(success=False, error="No screenshot tool available (grim/portal)")
+        return ToolResult(success=False, error="No screenshot backend available (grim/portal not configured)")
 
     def input_text(self, args: Dict[str, Any]) -> ToolResult:
         text = str(args.get("text", ""))
@@ -408,8 +405,4 @@ class ComputerAutomationMcpServer(BaseMcpServer):
                 return ToolResult(success=False, error=(proc.stderr.strip() or "Virtual keyboard input not supported by current compositor"))
             except Exception as e:
                 return ToolResult(success=False, error=str(e))
-        return ToolResult(success=False, error="No supported input tool available (wtype/ydotool) or compositor does not allow virtual input")
-
-    def list_windows(self, args: Dict[str, Any]) -> ToolResult:
-        # No reliable Wayland window listing backend available in this environment
-        return ToolResult(success=False, error="Window listing/control not supported in this session (GNOME Wayland restricts window introspection; no wmctrl/Shell API backend available)", content={"windows": [], "session": self._session()})
+        return ToolResult(success=False, error="No supported input backend available (wtype/ydotool) or compositor does not allow virtual input")

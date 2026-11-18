@@ -7,7 +7,8 @@
 - Phase 3: COMPLETE (database layer and persistence)
 - Phase 4: COMPLETE (model integration layer)
 - Phase 5: COMPLETE (planning, TODO and autonomous execution engine)
-- Phase 6–17: PENDING (next: Phase 6 — MCP infrastructure and custom MCP servers hardening/integration)
+- Phase 6: COMPLETE (MCP infrastructure and custom/external MCP servers — core implementation)
+- Phase 7–17: PENDING (next: Phase 7 — per roadmap)
 
 ## Completed — Phase 0 (Requirements, design and development preparation)
 All 12 steps done — see commit history. Deliverables in docs/.
@@ -61,7 +62,7 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - Commit: `cdd1d67`
 
 ## Verification
-- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **13 passed** (280 warnings: SQLAlchemy `utcnow` deprecations and pytest-asyncio default loop-scope notice)
+- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **21 passed** (537 warnings: SQLAlchemy `utcnow` deprecations and pytest-asyncio default loop-scope notice; no failures)
 - `python -m compileall backend/app backend/tests` → OK
 
 ## Completed — Phase 5 (Planning, TODO and autonomous execution engine)
@@ -72,11 +73,19 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - **Tests:** `backend/tests/test_phase5_execution.py` — planner structure, folder/files workflow, dependency ordering, TODO CRUD/status ops, pause/resume/stop/checkpoint, history/report fields, build-app workflow
 - **Computer MCP (Arch/GNOME Wayland aware):** `backend/app/mcp/servers/computer.py` expanded with capability reporting and supported OS controls (session/process/app discovery, open URI/path, notifications, audio, brightness, media, clipboard) and explicit reporting for compositor-restricted screenshot/input/window control
 
+## Completed — Phase 6 (MCP infrastructure and custom/external MCP servers)
+- **MCP client/protocol/transports:** `backend/app/mcp/protocol.py`, `backend/app/mcp/transports/{stdio,http}.py` — JSON-RPC helpers, stdio process client (initialize/capability negotiation, tools/resources/prompts discovery, tool invocation, response normalization, reconnect/health), and HTTP/Streamable-HTTP client (basic request/response + SSE parsing/session handling)
+- **External server adapter:** `backend/app/mcp/external.py` — wraps external stdio/HTTP MCP servers behind `BaseMcpServer` interface with discovery, invocation, and heuristic permission classification
+- **MCP manager/registry:** `backend/app/mcp/manager.py` — default/internal server seeding, registry CRUD (register/update/delete), connect/disconnect/restart/health, auto-connect for enabled internal servers, multi-transport instance building, unified discovery (tools/resources/prompts), permission/allowlist/denial and basic schema/required-arg validation, redacted persistent audit events + cache, and redacted public server views
+- **Persistence & API:** extended `McpServer` schema/config fields and added `McpAuditEvent` with best-effort SQLite schema evolution (`backend/app/database/{models.py,session.py}`), updated repositories/container, and expanded MCP API (`backend/app/api/routers/mcp.py`) for server CRUD, connect/disconnect/restart/health, tools/resources/prompts listing, tool calls, and audit queries
+- **Custom/domain server hardening:** enhanced `filesystem` (search content/metadata alias, deny patterns, limits, stricter checks), `terminal` (cwd/root confinement, command policy/deny patterns, timeout/output limits, process listing), `git` (remote listing and gated mutating ops), `database` (read-only enforcement, list tables, bounded parameterized queries), `browser` (session/fetch-based navigation/inspect/capture/link extraction), `task_memory` (expanded task/memory ops incl. status/delete/get/unresolved placeholder), and `computer` (capability-gated OS controls/adapters with explicit Wayland/session limitation reporting)
+- **Tests:** `backend/tests/test_mcp_phase6.py` plus updated `backend/tests/test_mcp.py`/`backend/app/mcp/testdata/stdio_test_server.py` — stdio transport handshake/discovery/calls/reconnect, external server registration/discovery/invocation/audit/disconnect-reconnect, registry CRUD/health/restart, permission/allowlist/validation enforcement, filesystem parity+safety, terminal/git/database/task-memory parity, and audit redaction/persistence
+
 ## In Progress
-- (none — ready for Phase 6)
+- (none — ready for Phase 7)
 
 ## Next
-- Phase 6: MCP infrastructure hardening and custom/external server integration (external stdio/Streamable HTTP transports, richer permission/approval/schema validation/persistent audit, agent-tool integration, and per-server parity per `docs/mcp/*` and `docs/roadmap/phase-06.md`)
+- Phase 7: proceed per roadmap (`docs/roadmap/phase-07.md`) — continue hardening agent-tool integration, richer UI automation/browser engines, external server ecosystem coverage, and deeper permission/approval flows as required by subsequent phases
 
 ## Blocked
 - (none)
@@ -86,5 +95,5 @@ All 12 steps done — see commit history. Deliverables in docs/.
 
 ## Notes
 - Repository: https://github.com/lil-smoker2/Nexus-AI (SSH remote)
-- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`docs/roadmap/phase-06.md` onward); `overview`, `README.md`, and `docs/roadmap/` may have local worktree edits
-- Next: proceed to Phase 6 per roadmap (`docs/roadmap/phase-06.md`) and continue MCP/agent/permission hardening
+- Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`docs/roadmap/phase-07.md` onward); `overview`, `README.md`, and `docs/roadmap/` may have local worktree edits
+- Next: proceed to Phase 7 per roadmap (`docs/roadmap/phase-07.md`) and continue MCP/agent/permission and runtime hardening

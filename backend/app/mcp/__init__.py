@@ -1,5 +1,5 @@
-"""MCP (Model Context Protocol-like) integration for NEXUS AI.
+"""MCP (Model Context Protocol) integration for NEXUS AI.
 
-Implements an internal MCP runtime: domain servers expose tools with schemas,
-a client manager handles registry/discovery/invocation, and APIs surface state.
+Provides MCP client/manager, registry, transports (internal/stdio/HTTP),
+domain servers, security/audit helpers, and APIs for autonomous workflows.
 """

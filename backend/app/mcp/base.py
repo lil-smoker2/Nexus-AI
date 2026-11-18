@@ -28,13 +28,14 @@ class McpServerConfig:
     id: str
     name: str
     description: str = ""
-    transport: str = "internal"  # internal/stdio/streamable_http (internal implemented)
+    transport: str = "internal"  # internal/stdio/streamable_http
     endpoint: str = ""
     args: List[Any] = field(default_factory=list)
     env: Dict[str, Any] = field(default_factory=dict)
     auth_config: Dict[str, Any] = field(default_factory=dict)
     permissions: Dict[str, Any] = field(default_factory=dict)
     timeout_ms: int = 30000
+    config: Dict[str, Any] = field(default_factory=dict)  # extra server/runtime config
 
 
 class BaseMcpServer:
@@ -98,3 +99,4 @@ class BaseMcpServer:
 
     def close(self) -> None:
         self.disconnect()
+
