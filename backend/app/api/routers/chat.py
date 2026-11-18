@@ -1,17 +1,22 @@
-"""Chat API router with persistent database storage."""
+"""Chat API router with persistent database storage.
+
+Chat/model interaction is isolated from MCP servers, execution engine internals,
+and other optional subsystems: failures there must not prevent basic conversation.
+"""
+
+import logging
+from datetime import datetime
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime
 from sqlalchemy.orm import Session
 
-from app.database.session import get_db
 from app.database.repositories.container import Repositories
-from app.orchestration.orchestrator import orchestrator
-from app.agents.base import AgentContext, AgentType
+from app.database.session import get_db
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def get_repos(db: Session = Depends(get_db)) -> Repositories:
@@ -84,6 +89,18 @@ async def get_messages(
     return repos.messages.get_by_conversation(conversation_id)
 
 
+async def _generate_chat_reply(model_messages: List[dict]) -> str:
+    """Direct model-service chat path (fallback/isolation from orchestration)."""
+    from app.models.schemas import GenerationRequest
+    from app.services.model_service import model_service
+
+    resp = await model_service.generate(
+        GenerationRequest(messages=model_messages, temperature=0.7)
+    )
+    content = (resp.content or "").strip() if resp else ""
+    return content or "I’m here, but I couldn’t generate a response right now."
+
+
 @router.post("/messages", response_model=SendMessageResponse)
 async def send_message(
     request: SendMessageRequest,
@@ -95,6 +112,7 @@ async def send_message(
 
     user_id = get_or_create_default_user(repos)
 
+    # Persist user message
     repos.messages.create_message(
         conversation_id=request.conversation_id,
         user_id=user_id,
@@ -102,47 +120,96 @@ async def send_message(
         content=request.content,
     )
 
-    # Build conversation history for the agent (last 10 messages)
+    # Build conversation history for the model (last 20 messages for context)
     prior_messages = repos.messages.get_by_conversation(request.conversation_id)
     model_messages: List[dict] = [
-        {"role": "system", "content": "You are NEXUS AI, a helpful personal assistant. Be concise and natural."}
+        {
+            "role": "system",
+            "content": "You are NEXUS AI, a helpful personal assistant and conversational companion. Be concise, natural, and supportive.",
+        }
     ]
-    for msg in prior_messages[-10:]:
+    for msg in prior_messages[-20:]:
         model_messages.append({"role": msg.role, "content": msg.content})
 
-    # Create execution record
-    execution = repos.executions.create_execution(
-        agent_id=AgentType.COMPANION.value,
-        user_objective=request.content,
-        conversation_id=request.conversation_id,
-    )
+    execution = None
+    reply: Optional[str] = None
 
-    context = AgentContext(
-        execution_id=execution.id,
-        agent_type=AgentType.COMPANION,
-        conversation_id=request.conversation_id,
-        user_id=user_id,
-        messages=model_messages[1:],  # exclude system for context; agent adds its own system
-    )
+    # Optional: record execution and try orchestrated agent path, but never let it break chat
+    try:
+        from app.agents.base import AgentContext, AgentType
+        from app.orchestration.orchestrator import orchestrator
 
-    result = await orchestrator.route(context)
+        try:
+            execution = repos.executions.create_execution(
+                agent_id=getattr(AgentType, "COMPANION", "companion").value
+                if hasattr(getattr(AgentType, "COMPANION", None), "value")
+                else "companion",
+                user_objective=request.content,
+                conversation_id=request.conversation_id,
+            )
+        except Exception:
+            execution = None
 
-    if not result.success:
-        repos.executions.update(execution.id, {"status": "failed", "final_report": result.message})
-        raise HTTPException(status_code=500, detail=result.message)
+        context = AgentContext(
+            execution_id=execution.id if execution else "chat-direct",
+            agent_type=getattr(AgentType, "COMPANION", "companion"),
+            conversation_id=request.conversation_id,
+            user_id=user_id,
+            messages=[m for m in model_messages if m.get("role") != "system"],
+        )
+        result = await orchestrator.route(context)
+        if result and getattr(result, "success", False) and getattr(result, "message", None):
+            reply = result.message
+            if execution:
+                try:
+                    repos.executions.update(
+                        execution.id, {"status": "completed", "final_report": reply}
+                    )
+                except Exception:
+                    pass
+        else:
+            if execution:
+                try:
+                    repos.executions.update(
+                        execution.id,
+                        {
+                            "status": "failed",
+                            "final_report": getattr(result, "message", "Agent returned no response"),
+                        },
+                    )
+                except Exception:
+                    pass
+    except Exception as exc:
+        logger.warning("Chat orchestration path failed, falling back to direct model: %s", exc)
+        if execution:
+            try:
+                repos.executions.update(
+                    execution.id, {"status": "failed", "final_report": f"Orchestration error: {exc}"}
+                )
+            except Exception:
+                pass
 
-    repos.executions.update(
-        execution.id,
-        {"status": "completed", "final_report": result.message},
-    )
+    # Fallback: direct model generation (keeps chat working even if agents/MCP/execution fail)
+    if not reply:
+        try:
+            reply = await _generate_chat_reply(model_messages)
+        except Exception as exc:
+            logger.exception("Chat model fallback failed: %s", exc)
+            raise HTTPException(
+                status_code=503,
+                detail="Chat is temporarily unavailable (model unavailable). Other systems may be affected, but chat can retry shortly.",
+            )
 
     assistant_msg = repos.messages.create_message(
         conversation_id=request.conversation_id,
         user_id=user_id,
         role="assistant",
-        content=result.message,
+        content=reply,
     )
 
-    repos.conversations.update(request.conversation_id, {"updated_at": datetime.utcnow()})
+    try:
+        repos.conversations.update(request.conversation_id, {"updated_at": datetime.utcnow()})
+    except Exception:
+        pass
 
     return SendMessageResponse(conversation_id=request.conversation_id, message=assistant_msg)

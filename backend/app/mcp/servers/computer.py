@@ -7,13 +7,17 @@ desktop actions to available system tools/backends (service-adapter boundary).
 
 from __future__ import annotations
 
+import getpass
 import glob
+import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import tempfile
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.mcp.base import BaseMcpServer, McpServerConfig, ToolDefinition, ToolResult
@@ -21,6 +25,252 @@ from app.mcp.base import BaseMcpServer, McpServerConfig, ToolDefinition, ToolRes
 
 def _run(cmd: List[str], timeout: int = 10, input_text: Optional[str] = None) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, input=input_text)
+
+
+def _read_text(path: str) -> Optional[str]:
+    try:
+        return Path(path).read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return None
+
+
+def _parse_os_release() -> Dict[str, Any]:
+    data: Dict[str, Any] = {}
+    text = _read_text("/etc/os-release")
+    if not text:
+        return data
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        v = v.strip().strip('"').strip("'")
+        data[k] = v
+    return data
+
+
+def _detect_package_managers() -> Dict[str, Any]:
+    candidates = [
+        ("pacman", ["pacman"]),
+        ("yay", ["yay"]),
+        ("paru", ["paru"]),
+        ("flatpak", ["flatpak"]),
+        ("snap", ["snap"]),
+        ("apt", ["apt", "apt-get"]),
+        ("dnf", ["dnf"]),
+        ("yum", ["yum"]),
+        ("zypper", ["zypper"]),
+        ("rpm", ["rpm"]),
+        ("dpkg", ["dpkg"]),
+        ("brew", ["brew"]),
+    ]
+    installed = []
+    paths: Dict[str, str] = {}
+    for name, bins in candidates:
+        found = None
+        for b in bins:
+            p = shutil.which(b)
+            if p:
+                found = p
+                break
+        if found:
+            installed.append(name)
+            paths[name] = found
+    primary = None
+    for pref in ("pacman", "apt", "dnf", "yum", "zypper"):
+        if pref in installed:
+            primary = pref
+            break
+    if not primary and installed:
+        primary = installed[0]
+    return {"primary": primary, "installed": installed, "paths": paths}
+
+
+def _available_shells() -> Dict[str, Any]:
+    shells = []
+    text = _read_text("/etc/shells")
+    if text:
+        for line in text.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                shells.append(line)
+    current = os.environ.get("SHELL")
+    existing = [s for s in shells if os.path.exists(s)]
+    return {"current": current, "configured": shells, "available": existing or shells}
+
+
+def _cpu_info() -> Dict[str, Any]:
+    info: Dict[str, Any] = {"logical_cpus": os.cpu_count()}
+    if shutil.which("lscpu"):
+        try:
+            p = _run(["lscpu"], timeout=5)
+            if p.returncode == 0 and p.stdout:
+                parsed: Dict[str, str] = {}
+                for line in p.stdout.splitlines():
+                    if ":" in line:
+                        k, v = line.split(":", 1)
+                        parsed[k.strip()] = v.strip()
+                for key, out in [
+                    ("Architecture", "architecture"),
+                    ("Model name", "model_name"),
+                    ("Vendor ID", "vendor"),
+                    ("CPU(s)", "cpus"),
+                    ("Thread(s) per core", "threads_per_core"),
+                    ("Core(s) per socket", "cores_per_socket"),
+                    ("Socket(s)", "sockets"),
+                ]:
+                    if key in parsed:
+                        info[out] = parsed[key]
+                info["lscpu"] = parsed
+        except Exception:
+            pass
+    # fallback to /proc/cpuinfo model name
+    if "model_name" not in info:
+        text = _read_text("/proc/cpuinfo") or ""
+        for line in text.splitlines():
+            if line.lower().startswith("model name") and ":" in line:
+                info["model_name"] = line.split(":", 1)[1].strip()
+                break
+    return info
+
+
+def _memory_info() -> Dict[str, Any]:
+    info: Dict[str, Any] = {}
+    text = _read_text("/proc/meminfo") or ""
+    for line in text.splitlines():
+        if ":" not in line:
+            continue
+        k, v = line.split(":", 1)
+        if k in ("MemTotal", "MemFree", "MemAvailable", "SwapTotal", "SwapFree", "Buffers", "Cached"):
+            info[k] = v.strip()
+    if shutil.which("free"):
+        try:
+            p = _run(["free", "-h"], timeout=5)
+            if p.returncode == 0:
+                info["free_h"] = p.stdout.strip().splitlines()
+        except Exception:
+            pass
+    return info
+
+
+def _disk_info() -> Dict[str, Any]:
+    info: Dict[str, Any] = {}
+    if shutil.which("lsblk"):
+        try:
+            p = _run(["lsblk", "-o", "NAME,SIZE,TYPE,MOUNTPOINTS,FSTYPE,MODEL", "-J"], timeout=5)
+            if p.returncode == 0 and p.stdout:
+                try:
+                    info["lsblk"] = json.loads(p.stdout)
+                except Exception:
+                    info["lsblk_raw"] = p.stdout.strip().splitlines()[:50]
+        except Exception:
+            pass
+    if shutil.which("df"):
+        try:
+            p = _run(["df", "-hT"], timeout=5)
+            if p.returncode == 0:
+                info["df_hT"] = p.stdout.strip().splitlines()[:40]
+        except Exception:
+            pass
+    return info
+
+
+def _hostname_info() -> Dict[str, Any]:
+    info: Dict[str, Any] = {}
+    try:
+        info["hostname"] = platform.node() or os.uname().nodename
+    except Exception:
+        pass
+    if shutil.which("hostnamectl"):
+        try:
+            p = _run(["hostnamectl", "--json=short"], timeout=5)
+            if p.returncode == 0 and p.stdout:
+                try:
+                    info["hostnamectl"] = json.loads(p.stdout)
+                except Exception:
+                    p2 = _run(["hostnamectl"], timeout=5)
+                    if p2.returncode == 0:
+                        info["hostnamectl_text"] = p2.stdout.strip().splitlines()[:30]
+        except Exception:
+            pass
+    return info
+
+
+def _hardware_info() -> Dict[str, Any]:
+    hw: Dict[str, Any] = {}
+    hw["cpu"] = _cpu_info()
+    hw["memory"] = _memory_info()
+    hw["disks"] = _disk_info()
+    hw["hostname"] = _hostname_info()
+    if shutil.which("uname"):
+        try:
+            p = _run(["uname", "-a"], timeout=5)
+            if p.returncode == 0:
+                hw["uname_a"] = p.stdout.strip()
+        except Exception:
+            pass
+    try:
+        hw["uptime_seconds"] = float(Path("/proc/uptime").read_text().split()[0])
+    except Exception:
+        pass
+    return hw
+
+
+def collect_os_identification() -> Dict[str, Any]:
+    os_release = _parse_os_release()
+    try:
+        uname = os.uname()
+        kernel = uname.release
+        kernel_version = uname.version
+        uname_info = {
+            "sysname": uname.sysname,
+            "nodename": uname.nodename,
+            "release": uname.release,
+            "version": uname.version,
+            "machine": uname.machine,
+        }
+    except Exception:
+        kernel = platform.release()
+        kernel_version = platform.version()
+        uname_info = {"release": kernel, "version": kernel_version, "machine": platform.machine()}
+
+    distribution = {
+        "name": os_release.get("NAME") or os_release.get("ID") or platform.system(),
+        "pretty_name": os_release.get("PRETTY_NAME") or os_release.get("NAME") or platform.platform(),
+        "id": os_release.get("ID"),
+        "id_like": os_release.get("ID_LIKE"),
+        "version_id": os_release.get("VERSION_ID"),
+        "version": os_release.get("VERSION"),
+        "build_id": os_release.get("BUILD_ID"),
+        "home_url": os_release.get("HOME_URL"),
+        "raw": os_release,
+    }
+
+    desktop_environment = os.environ.get("XDG_CURRENT_DESKTOP") or os.environ.get("DESKTOP_SESSION") or os.environ.get("XDG_SESSION_DESKTOP")
+    session_type = os.environ.get("XDG_SESSION_TYPE")
+    user = {
+        "name": getpass.getuser() if hasattr(getpass, "getuser") else os.environ.get("USER") or os.environ.get("LOGNAME"),
+        "uid": os.getuid() if hasattr(os, "getuid") else None,
+        "gid": os.getgid() if hasattr(os, "getgid") else None,
+        "home": os.path.expanduser("~"),
+    }
+
+    return {
+        "distribution": distribution,
+        "kernel": {"release": kernel, "version": kernel_version, "uname": uname_info},
+        "architecture": platform.machine() or uname_info.get("machine"),
+        "desktop_environment": desktop_environment,
+        "session_type": session_type,
+        "logged_in_user": user,
+        "installed_package_manager": _detect_package_managers(),
+        "available_shell": _available_shells(),
+        "system_hardware_information": _hardware_info(),
+        "platform": {
+            "system": platform.system(),
+            "platform": platform.platform(),
+            "python_version": platform.python_version(),
+        },
+    }
 
 
 class ComputerAutomationMcpServer(BaseMcpServer):
@@ -34,6 +284,7 @@ class ComputerAutomationMcpServer(BaseMcpServer):
         t = self.register_tool
         # Info / discovery
         t(ToolDefinition("computer.get_session_info", "Get OS and session info", {"type": "object", "properties": {}}, "read"), self.get_session_info)
+        t(ToolDefinition("computer.os_identification", "Retrieve structured OS identification (distribution, kernel, architecture, desktop, session, user, package managers, shells, hardware)", {"type": "object", "properties": {}}, "read"), self.os_identification)
         t(ToolDefinition("computer.capabilities", "Report supported OS-control capabilities and Wayland/compositor limitations", {"type": "object", "properties": {}}, "read"), self.capabilities)
         t(ToolDefinition("computer.list_processes", "List running processes (top)", {"type": "object", "properties": {"limit": {"type": "integer"}}}, "read"), self.list_processes)
         t(ToolDefinition("computer.which", "Locate an executable", {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}, "read"), self.which)
@@ -82,7 +333,28 @@ class ComputerAutomationMcpServer(BaseMcpServer):
             "user": os.getenv("USER") or os.getenv("USERNAME"),
             "home": os.path.expanduser("~"),
         })
+        try:
+            ident = collect_os_identification()
+            # include key identification fields for convenience/back-compat
+            info["os_identification"] = {
+                "distribution": ident.get("distribution", {}).get("pretty_name"),
+                "kernel": ident.get("kernel", {}).get("release"),
+                "architecture": ident.get("architecture"),
+                "desktop_environment": ident.get("desktop_environment"),
+                "session_type": ident.get("session_type"),
+                "package_manager": (ident.get("installed_package_manager") or {}).get("primary"),
+                "shell": (ident.get("available_shell") or {}).get("current"),
+            }
+        except Exception:
+            pass
         return ToolResult(success=True, content=info)
+
+    def os_identification(self, args: Dict[str, Any]) -> ToolResult:
+        try:
+            data = collect_os_identification()
+            return ToolResult(success=True, content=data)
+        except Exception as e:
+            return ToolResult(success=False, error=str(e), content={})
 
     def capabilities(self, args: Dict[str, Any]) -> ToolResult:
         sess = self._session()

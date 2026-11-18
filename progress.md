@@ -8,7 +8,8 @@
 - Phase 4: COMPLETE (model integration layer)
 - Phase 5: COMPLETE (planning, TODO and autonomous execution engine)
 - Phase 6: COMPLETE (MCP infrastructure and custom/external MCP servers — core implementation)
-- Phase 7–17: PENDING (next: Phase 7 — per roadmap)
+- Phase 7: IN PROGRESS (OS agent — Step 7.1 complete)
+- Phase 8–17: PENDING
 
 ## Completed — Phase 0 (Requirements, design and development preparation)
 All 12 steps done — see commit history. Deliverables in docs/.
@@ -81,11 +82,15 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - **Custom/domain server hardening:** enhanced `filesystem` (search content/metadata alias, deny patterns, limits, stricter checks), `terminal` (cwd/root confinement, command policy/deny patterns, timeout/output limits, process listing), `git` (remote listing and gated mutating ops), `database` (read-only enforcement, list tables, bounded parameterized queries), `browser` (session/fetch-based navigation/inspect/capture/link extraction), `task_memory` (expanded task/memory ops incl. status/delete/get/unresolved placeholder), and `computer` (capability-gated OS controls/adapters with explicit Wayland/session limitation reporting)
 - **Tests:** `backend/tests/test_mcp_phase6.py` plus updated `backend/tests/test_mcp.py`/`backend/app/mcp/testdata/stdio_test_server.py` — stdio transport handshake/discovery/calls/reconnect, external server registration/discovery/invocation/audit/disconnect-reconnect, registry CRUD/health/restart, permission/allowlist/validation enforcement, filesystem parity+safety, terminal/git/database/task-memory parity, and audit redaction/persistence
 
+## Completed — Phase 7.1 (OS identification) / Chat isolation
+- **Step 7.1 OS identification:** `backend/app/mcp/servers/computer.py` — added `collect_os_identification()` and MCP tool `computer.os_identification` returning structured distribution, kernel, architecture, desktop environment, session type, logged-in user, installed package managers (primary/installed/paths), available shell (current/configured/available), and system hardware information (CPU/memory/disks/hostname/uname/uptime); enriched `computer.get_session_info` with key identification summary
+- **Chat/model isolation:** `backend/app/api/routers/chat.py` now persists user messages and falls back to direct `model_service` generation when orchestration/agent/execution/MCP paths fail; execution tracking is best-effort. `backend/app/main.py` startup/shutdown initialize DB/model/MCP best-effort so optional subsystem failures do not prevent basic chat availability
+
 ## In Progress
-- (none — ready for Phase 7)
+- Phase 7: Operating-system agent (next: Step 7.2 filesystem control)
 
 ## Next
-- Phase 7: proceed per roadmap (`docs/roadmap/phase-07.md`) — continue hardening agent-tool integration, richer UI automation/browser engines, external server ecosystem coverage, and deeper permission/approval flows as required by subsequent phases
+- Phase 7 Step 7.2: filesystem control (directory navigation/inspection/create/modify/move/delete-with-approval/search/permissions inspection/backup) per `docs/roadmap/phase-07.md`, continuing toward 7.3–7.7 while testing
 
 ## Blocked
 - (none)
@@ -96,4 +101,5 @@ All 12 steps done — see commit history. Deliverables in docs/.
 ## Notes
 - Repository: https://github.com/lil-smoker2/Nexus-AI (SSH remote)
 - Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`docs/roadmap/phase-07.md` onward); `overview`, `README.md`, and `docs/roadmap/` may have local worktree edits
-- Next: proceed to Phase 7 per roadmap (`docs/roadmap/phase-07.md`) and continue MCP/agent/permission and runtime hardening
+- Chat/model path is isolated from MCP/execution/tooling failures (direct model fallback; best-effort startup for optional subsystems). Installed desktop app: `~/.local/bin/nexus-ai` / `~/.local/share/applications/nexus-ai.desktop` (backend launched from repo with `.venv`)
+- Next: continue Phase 7 Step 7.2+ per `docs/roadmap/phase-07.md`

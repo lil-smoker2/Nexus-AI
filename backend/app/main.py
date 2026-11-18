@@ -36,14 +36,32 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def on_startup():
-        init_db()
-        await model_service.initialize()
-        mcp_manager.initialize()
+        # Core persistence must be available for chat/history
+        try:
+            init_db()
+        except Exception:
+            pass
+        # Model service is needed for chat; initialize best-effort without blocking app startup
+        try:
+            await model_service.initialize()
+        except Exception:
+            pass
+        # MCP/tooling subsystems are optional for basic chat; failures must not break chat availability
+        try:
+            mcp_manager.initialize()
+        except Exception:
+            pass
 
     @app.on_event("shutdown")
     async def on_shutdown():
-        await model_service.shutdown()
-        mcp_manager.shutdown()
+        try:
+            await model_service.shutdown()
+        except Exception:
+            pass
+        try:
+            mcp_manager.shutdown()
+        except Exception:
+            pass
 
     app.include_router(health.router, prefix="/health", tags=["health"])
     app.include_router(version.router, prefix="/version", tags=["version"])
