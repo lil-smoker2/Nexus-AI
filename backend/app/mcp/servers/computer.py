@@ -14,6 +14,7 @@ import os
 import platform
 import pwd
 import re
+import select
 import shlex
 import shutil
 import signal as signalmod
@@ -356,6 +357,7 @@ class ComputerAutomationMcpServer(BaseMcpServer):
         t(ToolDefinition("computer.os_identification", "Retrieve structured OS identification (distribution, kernel, architecture, desktop, session, user, package managers, shells, hardware)", {"type": "object", "properties": {}}, "read"), self.os_identification)
         t(ToolDefinition("computer.capabilities", "Report supported OS-control capabilities and Wayland/compositor limitations", {"type": "object", "properties": {}}, "read"), self.capabilities)
         t(ToolDefinition("computer.list_processes", "List running processes (top)", {"type": "object", "properties": {"limit": {"type": "integer"}}}, "read"), self.list_processes)
+        t(ToolDefinition("computer.monitor_command", "Run and monitor a long-running command with periodic resource sampling until completion or timeout", {"type": "object", "properties": {"command": {"type": "string", "description": "Command line to run (no shell features; argv form)"}, "timeout": {"type": "integer", "description": "Max seconds to wait"}, "poll_interval": {"type": "number", "description": "Seconds between resource samples"}, "cwd": {"type": "string"}, "env": {"type": "object"}}, "required": ["command"]}, "execute"), self.monitor_command)
         t(ToolDefinition("computer.which", "Locate an executable", {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}, "read"), self.which)
         t(ToolDefinition("computer.list_applications", "List installed desktop applications", {"type": "object", "properties": {"limit": {"type": "integer"}, "include_hidden": {"type": "boolean"}}}, "read"), self.list_applications)
         t(ToolDefinition("computer.find_application", "Search installed desktop applications by name/id/keywords/categories", {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["query"]}, "read"), self.find_application)
@@ -481,6 +483,144 @@ class ComputerAutomationMcpServer(BaseMcpServer):
             return ToolResult(success=True, content={"header": head[0] if head else "", "processes": body, "count": len(body)})
         except Exception as e:
             return ToolResult(success=False, error=str(e))
+
+    def monitor_command(self, args: Dict[str, Any]) -> ToolResult:
+        command = str(args.get("command", "")).strip()
+        if not command:
+            return ToolResult(success=False, error="command is required")
+        timeout = max(1, min(int(args.get("timeout", 60)), 3600))
+        poll_interval = max(0.1, min(float(args.get("poll_interval", 1.0)), 10.0))
+        cwd = str(args.get("cwd") or "").strip() or None
+        env = args.get("env")
+        if env is not None and not isinstance(env, dict):
+            return ToolResult(success=False, error="env must be an object")
+
+        try:
+            cmd = shlex.split(command)
+        except Exception as e:
+            return ToolResult(success=False, error=f"Invalid command: {e}")
+        if not cmd:
+            return ToolResult(success=False, error="command is empty")
+        program = shutil.which(cmd[0])
+        if not program:
+            return ToolResult(success=False, error=f"Executable not found: {cmd[0]}")
+        full_cmd = [program] + cmd[1:]
+
+        try:
+            proc = subprocess.Popen(
+                full_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=cwd,
+                env=dict(os.environ, **(env or {})),
+                start_new_session=True,
+            )
+        except Exception as e:
+            return ToolResult(success=False, error=f"Failed to start command: {e}")
+
+        pid = proc.pid
+        start = time.time()
+        stdout_chunks: List[bytes] = []
+        stderr_chunks: List[bytes] = []
+        samples: List[Dict[str, Any]] = []
+        peak_rss_kb = 0
+        exit_code = None
+        timed_out = False
+
+        def _drain_pipes() -> None:
+            nonlocal stdout_chunks, stderr_chunks
+            for stream, chunks in ((proc.stdout, stdout_chunks), (proc.stderr, stderr_chunks)):
+                if stream is None:
+                    continue
+                while True:
+                    ready = select.select([stream], [], [], 0)[0]
+                    if not ready:
+                        break
+                    try:
+                        data = os.read(stream.fileno(), 65536)
+                    except OSError:
+                        break
+                    if not data:
+                        break
+                    chunks.append(data)
+
+        while True:
+            elapsed = time.time() - start
+            if elapsed >= timeout:
+                timed_out = True
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+                break
+            _drain_pipes()
+            try:
+                info = self._proc_info(pid)
+                if info.get("exists"):
+                    rss = info.get("vm_rss")
+                    if rss is not None:
+                        try:
+                            rss_kb = int(str(rss).split()[0])
+                            if rss_kb > peak_rss_kb:
+                                peak_rss_kb = rss_kb
+                        except Exception:
+                            pass
+                    samples.append({
+                        "at": round(time.time() - start, 3),
+                        "state": info.get("state"),
+                        "vm_rss_kb": rss,
+                        "cpu_utime_ticks": info.get("utime_ticks"),
+                        "cpu_stime_ticks": info.get("stime_ticks"),
+                    })
+            except Exception:
+                pass
+            exit_code = proc.poll()
+            if exit_code is not None:
+                break
+            time.sleep(poll_interval)
+
+        _drain_pipes()
+        try:
+            if proc.poll() is None:
+                proc.kill()
+        except Exception:
+            pass
+        try:
+            exit_code = proc.wait(timeout=5)
+        except Exception:
+            try:
+                exit_code = proc.poll()
+            except Exception:
+                exit_code = None
+
+        try:
+            stdout_text = b"".join(stdout_chunks).decode("utf-8", "replace")
+        except Exception:
+            stdout_text = ""
+        try:
+            stderr_text = b"".join(stderr_chunks).decode("utf-8", "replace")
+        except Exception:
+            stderr_text = ""
+        duration = round(time.time() - start, 3)
+
+        return ToolResult(
+            success=(exit_code == 0 and not timed_out),
+            content={
+                "pid": pid,
+                "command": full_cmd,
+                "exit_code": exit_code,
+                "timed_out": timed_out,
+                "duration_seconds": duration,
+                "timeout_seconds": timeout,
+                "peak_memory_kb": peak_rss_kb,
+                "stdout": stdout_text[-20000:],
+                "stderr": stderr_text[-20000:],
+                "stdout_truncated": len(stdout_text) > 20000,
+                "stderr_truncated": len(stderr_text) > 20000,
+                "samples": samples,
+                "sample_count": len(samples),
+            },
+        )
 
     def which(self, args: Dict[str, Any]) -> ToolResult:
         name = str(args.get("name", "")).strip()

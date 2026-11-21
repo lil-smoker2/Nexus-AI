@@ -137,3 +137,43 @@ def test_launch_inspect_terminate_arbitrary_process(computer_server):
     assert gone.content.get("exists") in (True, False)
     if gone.content.get("exists"):
         assert gone.content.get("state") in ("Z", "X")
+
+
+def test_monitor_command_quick_command(computer_server):
+    res = computer_server.call_tool(
+        "computer.monitor_command", {"command": "echo hello-nexus", "timeout": 10}
+    )
+    assert res.success, res.error
+    content = res.content
+    assert content["exit_code"] == 0
+    assert content["timed_out"] is False
+    assert "hello-nexus" in content["stdout"]
+    assert content["pid"] > 0
+    assert content["duration_seconds"] >= 0
+
+
+def test_monitor_command_timeout(computer_server):
+    res = computer_server.call_tool(
+        "computer.monitor_command", {"command": "sleep 30", "timeout": 2, "poll_interval": 0.5}
+    )
+    assert res.success is False or res.content["timed_out"] is True
+    content = res.content
+    assert content["timed_out"] is True
+    assert content["exit_code"] is not None
+    assert content["sample_count"] >= 0
+
+
+def test_monitor_command_executable_not_found(computer_server):
+    res = computer_server.call_tool(
+        "computer.monitor_command", {"command": "definitely-not-a-real-nexus-binary xyz", "timeout": 5}
+    )
+    assert res.success is False
+    assert "not found" in (res.error or "").lower()
+
+
+def test_monitor_command_nonzero_exit(computer_server):
+    res = computer_server.call_tool(
+        "computer.monitor_command", {"command": "false", "timeout": 10}
+    )
+    assert res.success is False
+    assert res.content["exit_code"] != 0

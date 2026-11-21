@@ -116,11 +116,16 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **34 passed** (608 warnings: SQLAlchemy/stdlib `utcnow`/`utcfromtimestamp` deprecations and pytest-asyncio default loop-scope notice; no failures)
 - `python -m compileall backend/app backend/tests` → OK
 
+## Completed — Phase 7.6 (Process monitoring)
+- **Long-running command monitoring:** `backend/app/mcp/servers/computer.py` added `computer.monitor_command` tool — starts an argv-form command, polls `/proc/<pid>` for resource samples (state, VM RSS, CPU utime/stime ticks) at a configurable interval, drains stdout/stderr non-blockingly, enforces a configurable timeout with terminate/kill fallback, and reports exit code, timed_out flag, duration, peak memory, truncated output, and sample history
+- Process discovery (`computer.list_processes`), resource consumption/status (`computer.inspect_process`), and permitted termination (`computer.terminate_process`) already complete from step 7.3
+
 ## In Progress
-- Phase 7: Operating-system agent (next: Step 7.6 process monitoring)
+- Phase 7: Operating-system agent (next: Step 7.7 test OS workflows per docs/roadmap/phase-07.md)
 
 ## Next
-- Phase 7 Step 7.6: process monitoring (discovery, resource consumption, status, permitted termination, long-running command monitoring) per `docs/roadmap/phase-07.md`, continuing toward 7.7 while testing
+- Phase 7 Step 7.7: test common OS workflows (find file, organize directory, launch Firefox, inspect app, diagnose service, disk space, install permitted app)
+- Then Phase 8: Browser navigation and web automation
 
 ## Blocked
 - (none)
