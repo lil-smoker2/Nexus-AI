@@ -1,10 +1,20 @@
-"""Filesystem MCP server: file and directory operations within allowed roots."""
+"""Filesystem MCP server: file and directory operations within allowed roots.
+
+Covers OS-agent filesystem control: navigation, inspection, creation/modification,
+movement/copy, deletion (policy/approval-gated at manager), search, permissions
+inspection, and backup.
+"""
 
 from __future__ import annotations
 
 import fnmatch
+import grp
 import os
+import pwd
 import shutil
+import stat as statmod
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -26,6 +36,46 @@ def _is_denied(rel: str, patterns: List[str]) -> bool:
     return False
 
 
+def _mode_info(st: os.stat_result, path: Path) -> Dict[str, Any]:
+    mode = st.st_mode
+    info: Dict[str, Any] = {
+        "mode": mode,
+        "mode_octal": oct(statmod.S_IMODE(mode)),
+        "permissions": statmod.filemode(mode),
+        "uid": getattr(st, "st_uid", None),
+        "gid": getattr(st, "st_gid", None),
+    }
+    try:
+        info["owner"] = pwd.getpwuid(st.st_uid).pw_name
+    except Exception:
+        info["owner"] = None
+    try:
+        info["group"] = grp.getgrgid(st.st_gid).gr_name
+    except Exception:
+        info["group"] = None
+    try:
+        info["readable"] = os.access(path, os.R_OK)
+        info["writable"] = os.access(path, os.W_OK)
+        info["executable"] = os.access(path, os.X_OK)
+    except Exception:
+        pass
+    return info
+
+
+def _time_info(st: os.stat_result) -> Dict[str, Any]:
+    def iso(ts: Optional[float]) -> Optional[str]:
+        if ts is None:
+            return None
+        try:
+            return datetime.utcfromtimestamp(ts).isoformat() + "Z"
+        except Exception:
+            return None
+    at = getattr(st, "st_atime", None)
+    mt = getattr(st, "st_mtime", None)
+    ct = getattr(st, "st_ctime", None)
+    return {"atime": at, "mtime": mt, "ctime": ct, "atime_iso": iso(at), "mtime_iso": iso(mt), "ctime_iso": iso(ct)}
+
+
 class FilesystemMcpServer(BaseMcpServer):
     server_type = "filesystem"
 
@@ -39,6 +89,7 @@ class FilesystemMcpServer(BaseMcpServer):
         self.max_read_bytes = int(cfg.get("max_read_bytes") or MAX_READ_BYTES)
         self.max_entries = int(cfg.get("max_entries") or MAX_ENTRIES)
         self.max_search_results = int(cfg.get("max_search_results") or MAX_SEARCH_RESULTS)
+        self.backup_dir = cfg.get("backup_dir")
         self._register_tools()
 
     def _ok(self, content: Any = None, **meta: Any) -> ToolResult:
@@ -70,23 +121,34 @@ class FilesystemMcpServer(BaseMcpServer):
 
     def _register_tools(self) -> None:
         t = self.register_tool
+        # navigation / inspection
+        t(ToolDefinition("fs.pwd", "Get filesystem root/base and resolved path info", {"type":"object","properties":{}}, "read"), self.pwd)
+        t(ToolDefinition("fs.resolve_path", "Resolve and validate a path within allowed root", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.resolve_path)
+        t(ToolDefinition("fs.list_directory", "List directory entries (directory navigation)", {"type":"object","properties":{"path":{"type":"string"},"recursive":{"type":"boolean"},"include_hidden":{"type":"boolean"}},"required":[]}, "read"), self.list_directory)
+        t(ToolDefinition("fs.stat", "Get path metadata/inspection", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.stat_path)
+        t(ToolDefinition("fs.get_metadata", "Get path metadata (alias)", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.stat_path)
+        t(ToolDefinition("fs.inspect_path", "Inspect file or directory (metadata, permissions, type)", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.stat_path)
+        t(ToolDefinition("fs.get_permissions", "Inspect permissions and ownership of a path", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.get_permissions)
+        t(ToolDefinition("fs.exists", "Check path existence", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.exists)
+        # create / read / modify
         t(ToolDefinition("fs.create_file", "Create a file", {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"},"overwrite":{"type":"boolean"}},"required":["path"]}, "write"), self.create_file)
         t(ToolDefinition("fs.create_directory", "Create a directory", {"type":"object","properties":{"path":{"type":"string"},"recursive":{"type":"boolean"}},"required":["path"]}, "write"), self.create_directory)
         t(ToolDefinition("fs.read_file", "Read a file", {"type":"object","properties":{"path":{"type":"string"},"encoding":{"type":"string"},"offset":{"type":"integer"},"limit":{"type":"integer"}},"required":["path"]}, "read"), self.read_file)
         t(ToolDefinition("fs.write_file", "Write/replace a file", {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"},"create_if_missing":{"type":"boolean"}},"required":["path","content"]}, "write"), self.write_file)
         t(ToolDefinition("fs.append_file", "Append to a file", {"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}, "write"), self.append_file)
         t(ToolDefinition("fs.edit_file", "Replace text in a file", {"type":"object","properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"replace_all":{"type":"boolean"}},"required":["path","old","new"]}, "write"), self.edit_file)
-        t(ToolDefinition("fs.delete_file", "Delete a file", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "destructive"), self.delete_file)
-        t(ToolDefinition("fs.delete_directory", "Delete a directory", {"type":"object","properties":{"path":{"type":"string"},"recursive":{"type":"boolean"}},"required":["path"]}, "destructive"), self.delete_directory)
+        # copy / move
         t(ToolDefinition("fs.copy_file", "Copy a file", {"type":"object","properties":{"source":{"type":"string"},"destination":{"type":"string"},"overwrite":{"type":"boolean"}},"required":["source","destination"]}, "write"), self.copy_file)
         t(ToolDefinition("fs.copy_directory", "Copy a directory", {"type":"object","properties":{"source":{"type":"string"},"destination":{"type":"string"}},"required":["source","destination"]}, "write"), self.copy_directory)
         t(ToolDefinition("fs.move_path", "Move/rename a path", {"type":"object","properties":{"source":{"type":"string"},"destination":{"type":"string"},"overwrite":{"type":"boolean"}},"required":["source","destination"]}, "destructive"), self.move_path)
-        t(ToolDefinition("fs.list_directory", "List directory entries", {"type":"object","properties":{"path":{"type":"string"},"recursive":{"type":"boolean"},"include_hidden":{"type":"boolean"}},"required":[]}, "read"), self.list_directory)
+        # backup
+        t(ToolDefinition("fs.backup_path", "Create a backup copy of a file or directory", {"type":"object","properties":{"path":{"type":"string"},"backup_path":{"type":"string"},"timestamp":{"type":"boolean"}},"required":["path"]}, "write"), self.backup_path)
+        # delete (policy/approval-gated by manager for destructive ops)
+        t(ToolDefinition("fs.delete_file", "Delete a file (destructive; may require approval by policy)", {"type":"object","properties":{"path":{"type":"string"},"approved":{"type":"boolean"}},"required":["path"]}, "destructive"), self.delete_file)
+        t(ToolDefinition("fs.delete_directory", "Delete a directory (destructive; may require approval by policy)", {"type":"object","properties":{"path":{"type":"string"},"recursive":{"type":"boolean"},"approved":{"type":"boolean"}},"required":["path"]}, "destructive"), self.delete_directory)
+        # search
         t(ToolDefinition("fs.search_files", "Search files by glob/name", {"type":"object","properties":{"path":{"type":"string"},"pattern":{"type":"string"},"max_results":{"type":"integer"}},"required":["pattern"]}, "read"), self.search_files)
         t(ToolDefinition("fs.search_content", "Search text content in files", {"type":"object","properties":{"path":{"type":"string"},"query":{"type":"string"},"glob":{"type":"string"},"max_results":{"type":"integer"}},"required":["query"]}, "read"), self.search_content)
-        t(ToolDefinition("fs.stat", "Get path metadata", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.stat_path)
-        t(ToolDefinition("fs.get_metadata", "Get path metadata (alias)", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.stat_path)
-        t(ToolDefinition("fs.exists", "Check path existence", {"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}, "read"), self.exists)
 
     def _path(self, args: Dict[str, Any], key: str = "path") -> Path:
         return self._resolve(str(args.get(key, ".")))
@@ -298,8 +360,17 @@ class FilesystemMcpServer(BaseMcpServer):
 
     def _entry(self, p: Path) -> Dict[str, Any]:
         try:
-            st = p.stat()
-            return {"name": p.name, "path": str(p), "type": "directory" if p.is_dir() else "file", "size": st.st_size, "mtime": st.st_mtime}
+            st = p.lstat() if p.is_symlink() else p.stat()
+            ptype = "symlink" if p.is_symlink() else ("directory" if p.is_dir() else "file")
+            info: Dict[str, Any] = {"name": p.name, "path": str(p), "type": ptype, "size": st.st_size}
+            info.update(_time_info(st))
+            info.update(_mode_info(st, p))
+            if p.is_symlink():
+                try:
+                    info["symlink_target"] = os.readlink(p)
+                except Exception:
+                    info["symlink_target"] = None
+            return info
         except Exception:
             return {"name": p.name, "path": str(p), "type": "directory" if p.is_dir() else "file"}
 
@@ -367,16 +438,145 @@ class FilesystemMcpServer(BaseMcpServer):
     def stat_path(self, args: Dict[str, Any]) -> ToolResult:
         try:
             p = self._path(args)
-            if not p.exists():
+            if not p.exists() and not p.is_symlink():
                 return self._ok({"path": str(p), "exists": False})
-            st = p.stat()
-            return self._ok({"path": str(p), "exists": True, "type": "directory" if p.is_dir() else "file", "size": st.st_size, "mtime": st.st_mtime, "mode": st.st_mode})
+            lst = p.lstat()
+            st = p.stat() if p.exists() else lst
+            ptype = "symlink" if p.is_symlink() else ("directory" if p.is_dir() else "file")
+            content: Dict[str, Any] = {
+                "path": str(p),
+                "exists": p.exists(),
+                "type": ptype,
+                "is_file": p.is_file(),
+                "is_dir": p.is_dir(),
+                "is_symlink": p.is_symlink(),
+                "size": st.st_size,
+            }
+            content.update(_time_info(st))
+            content.update(_mode_info(lst, p))
+            if p.is_symlink():
+                try:
+                    content["symlink_target"] = os.readlink(p)
+                except Exception:
+                    content["symlink_target"] = None
+            # convenience alias
+            content["mtime"] = getattr(st, "st_mtime", None)
+            content["mode"] = lst.st_mode
+            return self._ok(content)
         except Exception as e:
             return self._err(str(e))
 
     def exists(self, args: Dict[str, Any]) -> ToolResult:
         try:
             p = self._path(args)
-            return self._ok({"path": str(p), "exists": p.exists(), "is_file": p.is_file(), "is_dir": p.is_dir()})
+            return self._ok({
+                "path": str(p),
+                "exists": p.exists() or p.is_symlink(),
+                "is_file": p.is_file(),
+                "is_dir": p.is_dir(),
+                "is_symlink": p.is_symlink(),
+            })
+        except Exception as e:
+            return self._err(str(e))
+
+    # ---- navigation / permissions / backup ----
+    def pwd(self, args: Dict[str, Any]) -> ToolResult:
+        return self._ok({
+            "root": str(self.root),
+            "cwd": os.getcwd(),
+            "allowed_root": str(self.root),
+        })
+
+    def resolve_path(self, args: Dict[str, Any]) -> ToolResult:
+        try:
+            p = self._path(args)
+            rel = self._rel(p)
+            return self._ok({
+                "input": str(args.get("path", "")),
+                "path": str(p),
+                "relative": rel if not os.path.isabs(str(args.get("path", ""))) else rel,
+                "within_root": True,
+                "exists": p.exists() or p.is_symlink(),
+                "type": ("symlink" if p.is_symlink() else ("directory" if p.is_dir() else ("file" if p.exists() else "missing"))),
+            })
+        except Exception as e:
+            return self._err(str(e))
+
+    def get_permissions(self, args: Dict[str, Any]) -> ToolResult:
+        try:
+            p = self._path(args)
+            if not p.exists() and not p.is_symlink():
+                return self._err(f"Path not found: {p}")
+            lst = p.lstat()
+            content: Dict[str, Any] = {"path": str(p), "exists": p.exists(), "type": ("symlink" if p.is_symlink() else ("directory" if p.is_dir() else "file"))}
+            content.update(_mode_info(lst, p))
+            content.update(_time_info(lst))
+            if p.is_symlink():
+                try:
+                    content["symlink_target"] = os.readlink(p)
+                except Exception:
+                    content["symlink_target"] = None
+            return self._ok(content)
+        except Exception as e:
+            return self._err(str(e))
+
+    def backup_path(self, args: Dict[str, Any]) -> ToolResult:
+        try:
+            src = self._path(args)
+            denied = self._check_denied(src)
+            if denied:
+                return self._err(denied)
+            if src == self.root:
+                return self._err("Cannot back up the filesystem root")
+            if not src.exists() and not src.is_symlink():
+                return self._err(f"Source not found: {src}")
+            backup_arg = args.get("backup_path")
+            use_ts = bool(args.get("timestamp", True))
+            if backup_arg:
+                dst = self._resolve(str(backup_arg))
+            else:
+                ts = time.strftime("%Y%m%d%H%M%S")
+                base_name = src.name + (f".bak.{ts}" if use_ts else ".bak")
+                if self.backup_dir:
+                    bdir = self._resolve(str(self.backup_dir))
+                    bdir.mkdir(parents=True, exist_ok=True)
+                    dst = bdir / base_name
+                else:
+                    dst = src.parent / base_name
+            # avoid self-copy target collision
+            if dst.exists():
+                ts = time.strftime("%Y%m%d%H%M%S")
+                dst = dst.with_name(dst.name + f".{ts}")
+            try:
+                dst.relative_to(self.root)
+            except ValueError:
+                return self._err("Backup destination escapes allowed root")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if src.is_dir() and not src.is_symlink():
+                shutil.copytree(src, dst)
+                btype = "directory"
+            else:
+                # copy2 preserves metadata when possible; for symlink copies link
+                if src.is_symlink():
+                    target = os.readlink(src)
+                    os.symlink(target, dst)
+                else:
+                    shutil.copy2(src, dst)
+                btype = "file" if src.is_file() or src.is_symlink() else "path"
+            verified = dst.exists() or dst.is_symlink()
+            content = {
+                "source": str(src),
+                "backup": str(dst),
+                "type": btype,
+                "created": True,
+                "verified": verified,
+            }
+            if verified and dst.exists():
+                try:
+                    st = dst.stat()
+                    content["backup_size"] = st.st_size
+                except Exception:
+                    pass
+            return self._ok(content)
         except Exception as e:
             return self._err(str(e))

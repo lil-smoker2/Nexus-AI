@@ -6,6 +6,7 @@ from .database import DatabaseMcpServer
 from .git import GitMcpServer
 from .computer import ComputerAutomationMcpServer
 from .task_memory import TaskMemoryMcpServer
+from .pacman import PacmanMcpServer
 
 SERVER_CLASSES = {
     "filesystem": FilesystemMcpServer,
@@ -15,4 +16,5 @@ SERVER_CLASSES = {
     "git": GitMcpServer,
     "computer": ComputerAutomationMcpServer,
     "task_memory": TaskMemoryMcpServer,
+    "pacman": PacmanMcpServer,
 }

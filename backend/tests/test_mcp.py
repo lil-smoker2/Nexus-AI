@@ -71,3 +71,52 @@ def test_database_inspect_and_task_memory():
     assert l["success"], l
     g = mcp_manager.call_tool(tm, "task.get", {"id": tid})
     assert g["success"] and g["content"]["id"] == tid
+
+
+def test_filesystem_step72_navigation_inspection_permissions_backup():
+    """Phase 7.2: navigation, inspection, permissions inspection, backup."""
+    servers = {s["name"]: s for s in mcp_manager.list_servers()}
+    fs_id = servers["filesystem"]["id"]
+    base = "tmp_mcp_step72"
+
+    pwd = mcp_manager.call_tool(fs_id, "fs.pwd", {})
+    assert pwd["success"], pwd
+    assert "root" in pwd["content"] and "allowed_root" in pwd["content"]
+
+    res = mcp_manager.call_tool(fs_id, "fs.resolve_path", {"path": f"{base}/../{base}/x"})
+    assert res["success"], res
+    assert res["content"]["within_root"] is True
+    assert res["content"]["relative"].endswith(f"{base}/x")
+
+    assert mcp_manager.call_tool(fs_id, "fs.create_directory", {"path": base})["success"]
+    cf = mcp_manager.call_tool(fs_id, "fs.create_file", {"path": f"{base}/a.txt", "content": "step72-data", "overwrite": True})
+    assert cf["success"], cf
+
+    insp = mcp_manager.call_tool(fs_id, "fs.inspect_path", {"path": f"{base}/a.txt"})
+    assert insp["success"] and insp["content"]["exists"] is True
+    assert insp["content"]["type"] == "file"
+    assert "permissions" in insp["content"]
+    assert insp["content"].get("owner") or insp["content"].get("uid") is not None
+
+    perms = mcp_manager.call_tool(fs_id, "fs.get_permissions", {"path": f"{base}/a.txt"})
+    assert perms["success"], perms
+    assert "mode_octal" in perms["content"]
+    assert perms["content"].get("readable") in (True, False)
+
+    st = mcp_manager.call_tool(fs_id, "fs.stat", {"path": base})
+    assert st["success"] and st["content"]["is_dir"] is True and st["content"]["type"] == "directory"
+
+    bk = mcp_manager.call_tool(fs_id, "fs.backup_path", {"path": f"{base}/a.txt"})
+    assert bk["success"], bk
+    assert bk["content"]["verified"] is True
+    assert bk["content"]["source"].endswith(f"{base}/a.txt")
+    backup_file = bk["content"]["backup"]
+    # backup is readable copy
+    br = mcp_manager.call_tool(fs_id, "fs.read_file", {"path": backup_file})
+    assert br["success"] and "step72-data" in br["content"]["content"]
+
+    # cleanup: delete backup and test dir
+    assert mcp_manager.call_tool(fs_id, "fs.delete_file", {"path": backup_file})["success"]
+    assert mcp_manager.call_tool(fs_id, "fs.delete_file", {"path": f"{base}/a.txt"})["success"]
+    dd = mcp_manager.call_tool(fs_id, "fs.delete_directory", {"path": base, "recursive": True})
+    assert dd["success"] and dd["content"]["exists"] is False

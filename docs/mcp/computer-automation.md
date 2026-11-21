@@ -24,6 +24,13 @@ Provide OS/application/window awareness and input automation using the strongest
 5. **Verification:** confirm focused window, expected UI state/text, file/result produced by action.
 6. **Register & test:** per-adapter tests on target desktop session, permission denials, fallback behavior.
 
+### Implemented tool surface (current)
+- **Discovery/inspection:** `computer.get_session_info`, `computer.os_identification`, `computer.capabilities`, `computer.list_applications`, `computer.find_application`, `computer.application_info`, `computer.which`, `computer.list_processes`, `computer.inspect_process`, `computer.list_windows`, `computer.active_application`
+- **Control (gated):** `computer.launch_application` (desktop apps; arbitrary commands need `allow_arbitrary` + `approved`), `computer.terminate_process` (`destructive`; `approved` required; critical/other-user processes refused), `computer.open_path`, `computer.open_uri`, `computer.notify`
+- **Session controls:** audio (`computer.audio_*`), brightness (`computer.brightness_*`), media (`computer.media_*`), clipboard (`computer.clipboard_*`)
+- **Restricted UI:** `computer.screenshot`, `computer.input_text` (capability-gated; GNOME Wayland may deny)
+- **Backends:** desktop entries (`gtk-launch`/`gio`), `/proc` process data, `ps`; windows via `wmctrl`/sway/Hyprland/AT-SPI; active focus only where compositor exposes it
+
 ## 4. Operations summary
 - **Inspect:** session, windows, apps, accessibility elements.
 - **Control:** focus/launch apps and perform gated input actions.

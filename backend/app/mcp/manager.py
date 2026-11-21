@@ -26,8 +26,9 @@ DEFAULT_SERVERS = [
     {"name": "git", "server_type": "git", "description": "Git repository operations", "transport": "internal", "endpoint": "git", "args": [_default_root()], "permissions": {"allow": ["read", "write"]}, "config": {"root": _default_root(), "allow_mutating": False}},
     {"name": "database", "server_type": "database", "description": "Database inspection and read-only queries", "transport": "internal", "endpoint": "database", "args": [_default_root()], "permissions": {"allow": ["read"]}, "config": {"root": _default_root(), "read_only": True}},
     {"name": "browser", "server_type": "browser", "description": "Web fetch/navigation primitives", "transport": "internal", "endpoint": "browser", "args": [], "permissions": {"allow": ["read"]}, "config": {}},
-    {"name": "computer", "server_type": "computer", "description": "Desktop/session inspection and controlled actions", "transport": "internal", "endpoint": "computer", "args": [], "permissions": {"allow": ["read", "execute"]}, "config": {}},
+    {"name": "computer", "server_type": "computer", "description": "Desktop/session inspection and controlled actions", "transport": "internal", "endpoint": "computer", "args": [], "permissions": {"allow": ["read", "execute", "destructive"]}, "config": {"require_approval_for": ["destructive"]}},
     {"name": "task_memory", "server_type": "task_memory", "description": "Task and memory operations", "transport": "internal", "endpoint": "task_memory", "args": [], "permissions": {"allow": ["read", "write", "destructive"]}, "config": {}},
+    {"name": "pacman", "server_type": "pacman", "description": "Arch Linux pacman package management (read-only by default; mutating ops disabled)", "transport": "internal", "endpoint": "pacman", "args": [], "permissions": {"allow": ["read", "destructive"]}, "config": {"allow_mutating": False, "require_approval_for": ["destructive"]}},
 ]
 
 SENSITIVE_KEYS = {"token", "access_token", "refresh_token", "api_key", "apikey", "password", "secret", "client_secret", "authorization", "bearer", "private_key"}
@@ -129,6 +130,12 @@ class McpManager:
                         updates["config"] = spec.get("config", {})
                     if existing.enabled is None:
                         updates["enabled"] = True
+                    if spec["name"] == "computer":
+                        perms = existing.permissions or {}
+                        cfg = dict(existing.config or {})
+                        if perms.get("allow") == ["read", "execute"] and not cfg.get("require_approval_for"):
+                            updates["permissions"] = {**perms, "allow": list(spec["permissions"]["allow"])}
+                            updates["config"] = {**cfg, **(spec.get("config") or {})}
                     if updates:
                         repos.mcp_servers.update(existing.id, updates)
             db.commit()
@@ -445,8 +452,13 @@ class McpManager:
         require_approval = (record.config or {}).get("require_approval_for") or []
         if required in require_approval or tool_name in ((record.config or {}).get("require_approval_tools") or []):
             # no interactive approval system wired here; enforce explicit opt-in flag
-            if not arguments.get("_approved"):
-                return f"Tool '{tool_name}' requires explicit approval (_approved=true)"
+            approved = arguments.get("_approved")
+            if approved is None:
+                approved = arguments.get("approved")
+            if not approved:
+                return f"Tool '{tool_name}' requires explicit approval (approved=true)"
+            # normalize so downstream tools can also check
+            arguments["_approved"] = True
         return None
 
     def _validate_arguments(self, inst: BaseMcpServer, tool_name: str, arguments: Dict[str, Any]) -> Optional[str]:

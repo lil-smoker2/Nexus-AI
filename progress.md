@@ -8,7 +8,7 @@
 - Phase 4: COMPLETE (model integration layer)
 - Phase 5: COMPLETE (planning, TODO and autonomous execution engine)
 - Phase 6: COMPLETE (MCP infrastructure and custom/external MCP servers — core implementation)
-- Phase 7: IN PROGRESS (OS agent — Step 7.1 complete)
+- Phase 7: IN PROGRESS (OS agent — Steps 7.1–7.5 complete)
 - Phase 8–17: PENDING
 
 ## Completed — Phase 0 (Requirements, design and development preparation)
@@ -62,9 +62,7 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - **backend/.env.example**, **backend/tests/test_basic.py** fixed
 - Commit: `cdd1d67`
 
-## Verification
-- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **21 passed** (537 warnings: SQLAlchemy `utcnow` deprecations and pytest-asyncio default loop-scope notice; no failures)
-- `python -m compileall backend/app backend/tests` → OK
+(see latest Verification section above)
 
 ## Completed — Phase 5 (Planning, TODO and autonomous execution engine)
 - **Planner/decomposition:** `backend/app/execution/planner.py` — transforms objectives into structured plans/tasks (objective, description, expected result, subtasks field, dependencies, required tools, completion conditions, risks, actions), heuristic extraction/decomposition/ordering, missing-info/clarification detection, workflow plans (create folder/files, install package, build app, diagnose/organize)
@@ -86,11 +84,43 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - **Step 7.1 OS identification:** `backend/app/mcp/servers/computer.py` — added `collect_os_identification()` and MCP tool `computer.os_identification` returning structured distribution, kernel, architecture, desktop environment, session type, logged-in user, installed package managers (primary/installed/paths), available shell (current/configured/available), and system hardware information (CPU/memory/disks/hostname/uname/uptime); enriched `computer.get_session_info` with key identification summary
 - **Chat/model isolation:** `backend/app/api/routers/chat.py` now persists user messages and falls back to direct `model_service` generation when orchestration/agent/execution/MCP paths fail; execution tracking is best-effort. `backend/app/main.py` startup/shutdown initialize DB/model/MCP best-effort so optional subsystem failures do not prevent basic chat availability
 
+## Completed — Phase 7.2 (Filesystem control)
+- **Filesystem MCP server:** `backend/app/mcp/servers/filesystem.py` extended for OS-agent filesystem control — directory navigation/inspection (`fs.pwd`, `fs.resolve_path`, `fs.list_directory` with richer entries), file/path inspection (`fs.stat`/`fs.get_metadata`/`fs.inspect_path`, `fs.exists` incl. symlinks, timestamps/mode/type), permissions & ownership inspection (`fs.get_permissions` with owner/group/mode/access flags), create/read/modify parity (`fs.create_file`, `fs.create_directory`, `fs.read_file`, `fs.write_file`, `fs.append_file`, `fs.edit_file`), copy/move (`fs.copy_file`, `fs.copy_directory`, `fs.move_path`), search (`fs.search_files`, `fs.search_content`), deletion (`fs.delete_file`, `fs.delete_directory`, destructive/policy-gated by manager), and backup (`fs.backup_path` with optional timestamp/target dir and verified copy)
+- **Approval normalization:** `backend/app/mcp/manager.py` permission check accepts `approved` or `_approved` for tools requiring explicit approval and normalizes approval flag
+- **Tests:** added `backend/tests/test_mcp.py::test_filesystem_step72_navigation_inspection_permissions_backup` covering navigation/resolve, inspection, permissions, and backup/restore-read verification
+
+## Completed — Phase 7.3 (Application control)
+- **Application discovery:** `computer.list_applications` now parses full `.desktop` entries (name, exec, icon, comment, categories, keywords, MIME types, terminal/type/startup WM class, NoDisplay) across system/local/flatpak dirs with `include_hidden`; added `computer.find_application` (id/name/exec/keyword/category search) and `computer.application_info` (desktop entry detail + running pids)
+- **Launching:** `computer.launch_application` launches installed desktop apps via `gtk-launch`/`gio launch` (field-code-safe fallback to desktop Exec), verifies running pids after launch; arbitrary commands require both `allow_arbitrary=true` and `approved=true`
+- **Termination:** `computer.terminate_process` (destructive) terminates by pid or name with TERM/KILL/INT, supports `all_matches`, requires explicit `approved=true`, refuses PID 1/current/parent, other users, and critical system/desktop processes (systemd, gnome-shell, mutter, dbus, pipewire, sshd, Xorg, …) unless `allow_critical`; reports per-target signal results and post-kill state (zombie-aware)
+- **Process inspection:** `computer.inspect_process` (pid or name) reads `/proc` for cmdline, exe, cwd, owner/uid/gid, state, ppid, threads, memory (RSS/VSZ/swap), CPU ticks, start time/uptime, cgroup, OOM score, and children; `computer.list_processes` retained
+- **Windows/active app:** `computer.list_windows` now uses `wmctrl`/`swaymsg`/`hyprctl` when present and AT-SPI (`Atspi` helper via system Python) on GNOME Wayland, returning app/title/frame/state/extents; `computer.active_application` reports focused window where exposed, uses GNOME Shell Eval best-effort, and returns an explicit unsupported reason on sessions (e.g. GNOME Wayland) that do not expose focus
+- **Capabilities/defaults:** `computer.capabilities` reports application/process/window backends and limitations; default `computer` MCP server now allows `destructive` with `require_approval_for: ["destructive"]` (existing registries need a permission/config update)
+- **Tests:** `backend/tests/test_phase7_os.py` — capability reporting, hermetic application discovery/search/info, window/active-app reporting, exact process-name matching, backup root-escape refusal, and arbitrary launch → inspect → approval-gated termination lifecycle including critical-PID refusal
+- **Review hardening:** fixed `fs.backup_path` root-escape (reject root source and validate destination containment); made process-name matching exact (comm/argv0, no cmdline substring) and refused fuzzy multi-match termination; switched termination to `pidfd_send_signal` where available; parsed GNOME Shell Eval results and reject `(true, 'null')`; cached AT-SPI probing; unified window-backend discovery (removed unimplemented xdotool advertisement); backfilled the new `computer` destructive permission for existing registries; removed an unused test import
+
+## Completed — Phase 7.4 (Package management)
+- **Pacman adapter:** `backend/app/mcp/servers/pacman.py` — dedicated `PacmanMcpServer` registered as internal server `pacman` (read + destructive permissions, `allow_mutating=false` by default, `require_approval_for: ["destructive"]`)
+- **Read-only tools:** `pacman.is_available`, `pacman.search` (repo search with name/version/description parsing), `pacman.info` (sync `-Si` or installed `-Qi`), `pacman.list_installed` (filterable `-Q`), `pacman.list_files` (`-Ql`), `pacman.dependencies` (depends/opt/provides/conflicts), `pacman.updates` (`-Qu`, optional `-Sy` refresh; treats exit 1 as "no updates")
+- **Privileged mutating tools (double-gated):** `pacman.install` (`-S --noconfirm`, optional `-y`), `pacman.remove` (`-R/-Rs --noconfirm`, optional `-n`), `pacman.update` (`-S -y -u --noconfirm`); each requires `approved=true` AND `allow_mutating=true` in config, uses a configurable `sudo -n` prefix (no arbitrary sudo/shell), and returns bounded stdout/stderr
+- **Default registration:** `backend/app/mcp/manager.py` DEFAULT_SERVERS includes `pacman` with `allow: ["read","destructive"]` and `allow_mutating=false`; `backend/app/mcp/servers/__init__.py` exports `PacmanMcpServer`
+- **Tests:** `backend/tests/test_phase7_pacman.py` — availability (skips if no pacman), search, info/deps, list_installed, updates check, and mutating-op gating (approval required; disabled by config)
+
+## Completed — Phase 7.5 (GNOME integration)
+- **D-Bus tools:** `computer.dbus_list_names` (session bus name listing with filter/limit), `computer.dbus_introspect` (introspect any session D-Bus service/object via `gdbus`)
+- **GIO/GVFS:** `computer.gio_info` (file info via `gio info`, optional attribute selection)
+- **GNOME session info:** `computer.gnome_session_info` (session type/desktop/display env, `org.gnome.SessionManager` IsSessionRunning/SessionName/SessionIsActive, GTK/icon theme via `gsettings`)
+- **Existing coverage retained:** `computer.notify` (notify-send), `computer.clipboard_*` (wl-copy/wl-paste), `computer.audio_*` (pactl), `computer.brightness_*` (brightnessctl), `computer.media_*` (playerctl), `computer.list_windows`/`computer.active_application` (AT-SPI/wmctrl/sway/Hyprland), `computer.list_applications`/`computer.find_application`/`computer.application_info` (desktop entries + GNOME app discovery)
+
+## Verification
+- `cd backend && PYTHONPATH=. ../.venv/bin/python -m pytest -q` → **34 passed** (608 warnings: SQLAlchemy/stdlib `utcnow`/`utcfromtimestamp` deprecations and pytest-asyncio default loop-scope notice; no failures)
+- `python -m compileall backend/app backend/tests` → OK
+
 ## In Progress
-- Phase 7: Operating-system agent (next: Step 7.2 filesystem control)
+- Phase 7: Operating-system agent (next: Step 7.6 process monitoring)
 
 ## Next
-- Phase 7 Step 7.2: filesystem control (directory navigation/inspection/create/modify/move/delete-with-approval/search/permissions inspection/backup) per `docs/roadmap/phase-07.md`, continuing toward 7.3–7.7 while testing
+- Phase 7 Step 7.6: process monitoring (discovery, resource consumption, status, permitted termination, long-running command monitoring) per `docs/roadmap/phase-07.md`, continuing toward 7.7 while testing
 
 ## Blocked
 - (none)
@@ -102,4 +132,4 @@ All 12 steps done — see commit history. Deliverables in docs/.
 - Repository: https://github.com/lil-smoker2/Nexus-AI (SSH remote)
 - Roadmap source: `NEXUS_AI_Revised_Master_Roadmap.md` (`docs/roadmap/phase-07.md` onward); `overview`, `README.md`, and `docs/roadmap/` may have local worktree edits
 - Chat/model path is isolated from MCP/execution/tooling failures (direct model fallback; best-effort startup for optional subsystems). Installed desktop app: `~/.local/bin/nexus-ai` / `~/.local/share/applications/nexus-ai.desktop` (backend launched from repo with `.venv`)
-- Next: continue Phase 7 Step 7.2+ per `docs/roadmap/phase-07.md`
+- Next: continue Phase 7 Step 7.4+ per `docs/roadmap/phase-07.md`
